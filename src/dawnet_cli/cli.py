@@ -1,49 +1,46 @@
 import click
-from questionary import prompt
-
+from questionary import select
 from .api import get_remotes
 
-# # Function to fetch or generate a joke
-# def get_joke():
-#     return "Why don't scientists trust atoms? Because they make up everything!"
-#
-# # Main CLI command
-# @click.command()
-# @click.option('--name', prompt='Your name', help='The name of the person to greet.')
-# @click.option('--tell-joke', is_flag=True, help='Tell a joke after greeting.')
-# def main(name, tell_joke):
-#     """Simple CLI that greets the user and optionally tells them a joke."""
-#     greeting = f"Hello, {name}!"
-#     click.echo(greeting)
-#
-#     if tell_joke:
-#         # Use Questionary to ask if the user really wants to hear a joke
-#         questions = [
-#             {
-#                 'type': 'confirm',
-#                 'name': 'wants_joke',
-#                 'message': 'Do you really want to hear a joke?',
-#                 'default': True,
-#             },
-#         ]
-#         answers = prompt(questions)
-#
-#         if answers.get('wants_joke', False):
-#             joke = get_joke()
-#             click.echo(joke)
-#         else:
-#             click.echo("No joke for you today!")
+@click.group()
+def cli():
+    """DAWnet Command Line Interface."""
+    pass
 
-@click.command()
-def list():
-    remote_list = get_remotes()
-    for remote in remote_list:
+def list_remotes():
+    for remote in get_remotes():
         print(remote)
 
-@click.command()
-def main():
-    list()
+@cli.command()
+def remotes():
+    """Manage DAWnet Remotes."""
+    remote_options = ['list', 'run']
+    # Use questionary to let the user select a remote from the list
+    selected_remote = select(
+        "Select a action:",
+        choices=remote_options,
+    ).ask()  # .ask() displays the prompt
 
+    if selected_remote == 'list':  # If a selection was made
+        list_remotes()
+    elif selected_remote == 'run':
+        """Manage DAWnet Remotes."""
+        remote_list = get_remotes()
+        # Use questionary to let the user select a remote from the list
+        selected_remote = select(
+            "Select a remote:",
+            choices=remote_list,
+        ).ask()  # .ask() displays the prompt
+
+        if selected_remote:  # If a selection was made
+            print(f"You selected: {selected_remote}")
+        else:
+            print("No selection was made.")
+
+@cli.command()
+def greet():
+    """Display the welcome message."""
+    print('Welcome to the DAWnet CLI!')
 
 if __name__ == '__main__':
-    main()
+    cli()
