@@ -1,61 +1,23 @@
 import click
 from questionary import select
-from .api import get_remotes
-import uuid
-import json
 import os
+import platform
+from .persistence import set_or_update_token, read_token_from_file, generate_uuid
+from .api import get_remotes
 
-TOKEN_FILE_PATH = "uuid_token.json"
-
-def generate_uuid():
-    return str(uuid.uuid4())
-
-def save_token_to_file(token):
-    with open(TOKEN_FILE_PATH, 'w') as f:
-        json.dump({"uuid": token}, f)
-
-def read_token_from_file():
-    if os.path.exists(TOKEN_FILE_PATH):
-        with open(TOKEN_FILE_PATH) as f:
-            data = json.load(f)
-            return data.get("uuid")
+def clear_screen():
+    if platform.system() == "Windows":
+        os.system('cls')
     else:
-        return None
+        os.system('clear')
 
-def is_valid_uuid(uuid_to_test, version=4):
-    """
-    Check if uuid_to_test is a valid UUID.
-
-    Parameters:
-    uuid_to_test (str): String to test for UUID.
-    version (int): UUID version (1, 3, 4, 5). Default is 4.
-
-    Returns:
-    bool: True if uuid_to_test is a valid UUID, otherwise False.
-    """
-    try:
-        uuid_obj = uuid.UUID(uuid_to_test, version=version)
-        # Check if it's a valid UUID and if it's the same version
-        return str(uuid_obj) == uuid_to_test and uuid_obj.version == version
-    except ValueError:
-        return False
-
-def set_or_update_token(token=None):
-    if token is None:
-        token = generate_uuid()
-
-    if not is_valid_uuid(token):
-        click.echo(f"Token: {token}, is not a valid UUID.")
-        return None
-
-    save_token_to_file(token)
-    return token
 
 @click.group(invoke_without_command=True)
 @click.pass_context
 def cli(ctx):
     if ctx.invoked_subcommand is None:
         menu(ctx)
+
 
 def menu(ctx):
     entry_options = ['tokens', 'remotes']
@@ -64,10 +26,13 @@ def menu(ctx):
         choices=entry_options,
     ).ask()
 
+    clear_screen()
+
     if selected_entry_option == 'tokens':
         tokens_menu(ctx)
     elif selected_entry_option == 'remotes':
         ctx.invoke(remotes)
+
 
 def tokens_menu(ctx):
     token_actions = ['current token', 'set token', 'generate new token', 'menu']
@@ -75,6 +40,8 @@ def tokens_menu(ctx):
         "Token management options:",
         choices=token_actions,
     ).ask()
+
+    clear_screen()
 
     if selected_action == 'set token':
         token = click.prompt("Enter the new token", type=str)
@@ -97,55 +64,77 @@ def tokens_menu(ctx):
 
     menu(ctx)
 
+
 @cli.command()
 @click.pass_context
 def remotes(ctx):
-    remote_options = ['list', 'Go Back']
+    remote_options = ['list', 'menu']
     selected_remote_option = select(
         "Select an action:",
         choices=remote_options,
     ).ask()
 
+    clear_screen()
+
     if selected_remote_option == 'list':
         list_categories(ctx)
-    elif selected_remote_option == 'Go Back':
-        print("Going back to the main menu...")
+    elif selected_remote_option == 'menu':
+        menu(ctx)
+
 
 def list_categories(ctx):
-    category_options = ['available', 'installed', 'running', 'all']
+    category_options = ['available', 'installed', 'running', 'all', 'menu']
     selected_category = select(
         "Select a category to list:",
         choices=category_options,
     ).ask()
 
+    clear_screen()
+
     if selected_category:
+        if selected_category == 'menu':
+            menu(ctx)
+            
         list_remotes(ctx, selected_category)
 
+
 def list_remotes(ctx, category):
-    # Placeholder: Replace with actual logic to fetch remotes based on category
-    # For demonstration, we'll just call get_remotes regardless of the category
     remotes = get_remotes()
+
+    # Append 'menu' option to the remotes list
+    remotes.append('menu')
+
     selected_remote = select(
         "Select a remote to manage:",
         choices=remotes,
     ).ask()
 
+    clear_screen()
+
     if selected_remote:
-        manage_remote(ctx, selected_remote)
+        if selected_remote == 'menu':
+            menu(ctx)
+        else:
+            manage_remote(ctx, selected_remote)
+
 
 def manage_remote(ctx, remote_name):
-    actions = ['run', 'stop', 'install', 'Go Back']
+    actions = ['run', 'stop', 'install', 'menu']
     selected_action = select(
         f"Select an action for {remote_name}:",
         choices=actions,
     ).ask()
 
-    if selected_action == 'Go Back':
+    clear_screen()
+
+    if selected_action == 'menu':
         list_categories(ctx)  # Modify to return to the category selection
     else:
         print(f"{selected_action} action for {remote_name} not implemented.")
 
+
 if __name__ == '__main__':
+    clear_screen()
     token = read_token_from_file()
 
     if token is None:
