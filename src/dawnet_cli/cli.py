@@ -5,6 +5,7 @@ import platform
 from .persistence import set_or_update_token, read_token_from_file, generate_uuid
 from .api import get_remotes
 
+
 def clear_screen():
     if platform.system() == "Windows":
         os.system('cls')
@@ -83,7 +84,7 @@ def remotes(ctx):
 
 
 def list_categories(ctx):
-    category_options = ['available', 'installed', 'running', 'all', 'menu']
+    category_options = ['all', 'running', 'available', 'installed', 'menu']
     selected_category = select(
         "Select a category to list:",
         choices=category_options,
@@ -94,11 +95,11 @@ def list_categories(ctx):
     if selected_category:
         if selected_category == 'menu':
             menu(ctx)
-            
+
         list_remotes(ctx, selected_category)
 
 
-def list_remotes(ctx, category):
+def list_remotes(ctx, selected_category):
     remotes = get_remotes()
 
     # Append 'menu' option to the remotes list
@@ -115,11 +116,20 @@ def list_remotes(ctx, category):
         if selected_remote == 'menu':
             menu(ctx)
         else:
-            manage_remote(ctx, selected_remote)
+            manage_remote(ctx, selected_remote, selected_category)
 
 
-def manage_remote(ctx, remote_name):
-    actions = ['run', 'stop', 'install', 'menu']
+def manage_remote(ctx, remote_name, selected_category):
+    actions = []
+    if selected_category == 'running':
+        actions = ['stop', 'menu']
+    elif selected_category == 'installed':
+        actions = ['run', 'stop', 'menu']
+    elif selected_category == 'available':
+        actions = ['install', 'menu']
+    elif selected_category == 'all':
+        actions = ['run', 'stop', 'install', 'menu']
+
     selected_action = select(
         f"Select an action for {remote_name}:",
         choices=actions,
