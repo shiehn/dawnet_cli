@@ -22,9 +22,32 @@ def read_token_from_file():
     else:
         return None
 
+def is_valid_uuid(uuid_to_test, version=4):
+    """
+    Check if uuid_to_test is a valid UUID.
+
+    Parameters:
+    uuid_to_test (str): String to test for UUID.
+    version (int): UUID version (1, 3, 4, 5). Default is 4.
+
+    Returns:
+    bool: True if uuid_to_test is a valid UUID, otherwise False.
+    """
+    try:
+        uuid_obj = uuid.UUID(uuid_to_test, version=version)
+        # Check if it's a valid UUID and if it's the same version
+        return str(uuid_obj) == uuid_to_test and uuid_obj.version == version
+    except ValueError:
+        return False
+
 def set_or_update_token(token=None):
     if token is None:
         token = generate_uuid()
+
+    if not is_valid_uuid(token):
+        click.echo(f"Token: {token}, is not a valid UUID.")
+        return None
+
     save_token_to_file(token)
     return token
 
@@ -47,28 +70,32 @@ def menu(ctx):
         ctx.invoke(remotes)
 
 def tokens_menu(ctx):
-    token_actions = ['Set Token', 'Get Token', 'Refresh/Generate Token', 'Go Back']
+    token_actions = ['current token', 'set token', 'generate new token', 'menu']
     selected_action = select(
         "Token management options:",
         choices=token_actions,
     ).ask()
 
-    if selected_action == 'Set Token':
+    if selected_action == 'set token':
         token = click.prompt("Enter the new token", type=str)
-        set_or_update_token(token)
+        if not set_or_update_token(token):
+            menu(ctx)
+
         click.echo(f"Token has been updated to: {token}")
-    elif selected_action == 'Get Token':
+    elif selected_action == 'current token':
         token = read_token_from_file()
         if token:
-            click.echo(f"Current token: {token}")
+            click.echo(f"current token: {token}")
         else:
             click.echo("No token found. A token will be generated.")
             set_or_update_token()
-    elif selected_action == 'Refresh/Generate Token':
+    elif selected_action == 'generate new token':
         new_token = set_or_update_token()
         click.echo(f"New token generated: {new_token}")
-    elif selected_action == 'Go Back':
+    elif selected_action == 'menu':
         menu(ctx)
+
+    menu(ctx)
 
 @cli.command()
 @click.pass_context
@@ -119,4 +146,9 @@ def manage_remote(ctx, remote_name):
         print(f"{selected_action} action for {remote_name} not implemented.")
 
 if __name__ == '__main__':
+    token = read_token_from_file()
+
+    if token is None:
+        print(set_or_update_token(token=generate_uuid()))
+
     cli()
