@@ -1,6 +1,32 @@
 import click
 from questionary import select
 from .api import get_remotes
+import uuid
+import json
+import os
+
+TOKEN_FILE_PATH = "uuid_token.json"
+
+def generate_uuid():
+    return str(uuid.uuid4())
+
+def save_token_to_file(token):
+    with open(TOKEN_FILE_PATH, 'w') as f:
+        json.dump({"uuid": token}, f)
+
+def read_token_from_file():
+    if os.path.exists(TOKEN_FILE_PATH):
+        with open(TOKEN_FILE_PATH) as f:
+            data = json.load(f)
+            return data.get("uuid")
+    else:
+        return None
+
+def set_or_update_token(token=None):
+    if token is None:
+        token = generate_uuid()
+    save_token_to_file(token)
+    return token
 
 @click.group(invoke_without_command=True)
 @click.pass_context
@@ -16,13 +42,33 @@ def menu(ctx):
     ).ask()
 
     if selected_entry_option == 'tokens':
-        ctx.invoke(tokens)
+        tokens_menu(ctx)
     elif selected_entry_option == 'remotes':
         ctx.invoke(remotes)
 
-@cli.command()
-def tokens():
-    click.echo("Token management not implemented.")
+def tokens_menu(ctx):
+    token_actions = ['Set Token', 'Get Token', 'Refresh/Generate Token', 'Go Back']
+    selected_action = select(
+        "Token management options:",
+        choices=token_actions,
+    ).ask()
+
+    if selected_action == 'Set Token':
+        token = click.prompt("Enter the new token", type=str)
+        set_or_update_token(token)
+        click.echo(f"Token has been updated to: {token}")
+    elif selected_action == 'Get Token':
+        token = read_token_from_file()
+        if token:
+            click.echo(f"Current token: {token}")
+        else:
+            click.echo("No token found. A token will be generated.")
+            set_or_update_token()
+    elif selected_action == 'Refresh/Generate Token':
+        new_token = set_or_update_token()
+        click.echo(f"New token generated: {new_token}")
+    elif selected_action == 'Go Back':
+        menu(ctx)
 
 @cli.command()
 @click.pass_context
