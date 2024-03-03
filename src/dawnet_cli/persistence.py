@@ -7,27 +7,54 @@ db_path = 'docker_containers.db'
 conn = sqlite3.connect(db_path)
 cursor = conn.cursor()
 
+# CONTAINER STATUS ###############################
+
 # Create table for storing container PIDs
+# Update the container_pids table schema
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS container_pids
-(container_id TEXT PRIMARY KEY, pid INTEGER)''')
+(id INTEGER PRIMARY KEY,
+ pid INTEGER,
+ container_id TEXT,
+ remote_name TEXT,
+ status INTEGER)
+''')
+conn.commit()
+
+
+# Existing UUID Token Table and Functions...
+
+# Updated save_pid function
+def save_pid(pid, container_id, remote_name, status):
+    cursor.execute("INSERT INTO container_pids (pid, container_id, remote_name, status) VALUES (?, ?, ?, ?)",
+                   (pid, container_id, remote_name, status))
+    conn.commit()
+
+
+# New update_status function
+def update_status(container_id, status):
+    cursor.execute("UPDATE container_pids SET status = ? WHERE container_id = ?", (status, container_id))
+    conn.commit()
+
+
+# New list_pids function
+def list_pids(status=None):
+    if status is None:
+        cursor.execute("SELECT id, pid, container_id, remote_name, status FROM container_pids")
+    else:
+        cursor.execute("SELECT id, pid, container_id, remote_name, status FROM container_pids WHERE status = ?",
+                       (status,))
+
+    return cursor.fetchall()
+
+
+# CONNECTION TOKEN ###############################
 
 # Extend the database schema to include a table for the UUID token
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS uuid_token
 (id INTEGER PRIMARY KEY, token TEXT)''')
 conn.commit()
-
-
-def save_pid(container_id, pid):
-    cursor.execute("INSERT INTO container_pids (container_id, pid) VALUES (?, ?)",
-                   (container_id, pid))
-    conn.commit()
-
-
-def delete_pid(container_id):
-    cursor.execute("DELETE FROM container_pids WHERE container_id = ?", (container_id,))
-    conn.commit()
 
 
 def generate_uuid():

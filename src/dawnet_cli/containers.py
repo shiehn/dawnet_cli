@@ -1,7 +1,7 @@
 import click
 import docker
 import os
-from .persistence import save_pid, delete_pid
+from .persistence import save_pid
 
 
 def get_docker_client():
@@ -51,7 +51,7 @@ def stop_container(container_id):
     print(f"Container {container_id} stopped.")
 
     # Remove PID entry from SQLite database
-    delete_pid(container_id)
+    #delete_pid(container_id)
 
     return container
 
