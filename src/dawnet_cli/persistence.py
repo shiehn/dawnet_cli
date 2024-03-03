@@ -1,43 +1,56 @@
-import click
+import sqlite3
 import uuid
-import json
-import os
+import click
 
-TOKEN_FILE_PATH = "uuid_token.json"
+# Database setup
+db_path = 'docker_containers.db'
+conn = sqlite3.connect(db_path)
+cursor = conn.cursor()
+
+# Create table for storing container PIDs
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS container_pids
+(container_id TEXT PRIMARY KEY, pid INTEGER)''')
+
+# Extend the database schema to include a table for the UUID token
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS uuid_token
+(id INTEGER PRIMARY KEY, token TEXT)''')
+conn.commit()
+
+
+def save_pid(container_id, pid):
+    cursor.execute("INSERT INTO container_pids (container_id, pid) VALUES (?, ?)",
+                   (container_id, pid))
+    conn.commit()
+
+
+def delete_pid(container_id):
+    cursor.execute("DELETE FROM container_pids WHERE container_id = ?", (container_id,))
+    conn.commit()
 
 
 def generate_uuid():
     return str(uuid.uuid4())
 
 
-def save_token_to_file(token):
-    with open(TOKEN_FILE_PATH, 'w') as f:
-        json.dump({"uuid": token}, f)
+def save_token_to_db(token):
+    # Clear the existing token before saving the new one
+    cursor.execute("DELETE FROM uuid_token")
+    # Insert the new token
+    cursor.execute("INSERT INTO uuid_token (token) VALUES (?)", (token,))
+    conn.commit()
 
 
-def read_token_from_file():
-    if os.path.exists(TOKEN_FILE_PATH):
-        with open(TOKEN_FILE_PATH) as f:
-            data = json.load(f)
-            return data.get("uuid")
-    else:
-        return None
+def read_token_from_db():
+    cursor.execute("SELECT token FROM uuid_token LIMIT 1")
+    row = cursor.fetchone()
+    return row[0] if row else None
 
 
 def is_valid_uuid(uuid_to_test, version=4):
-    """
-    Check if uuid_to_test is a valid UUID.
-
-    Parameters:
-    uuid_to_test (str): String to test for UUID.
-    version (int): UUID version (1, 3, 4, 5). Default is 4.
-
-    Returns:
-    bool: True if uuid_to_test is a valid UUID, otherwise False.
-    """
     try:
         uuid_obj = uuid.UUID(uuid_to_test, version=version)
-        # Check if it's a valid UUID and if it's the same version
         return str(uuid_obj) == uuid_to_test and uuid_obj.version == version
     except ValueError:
         return False
@@ -51,5 +64,5 @@ def set_or_update_token(token=None):
         click.echo(f"Token: {token}, is not a valid UUID.")
         return None
 
-    save_token_to_file(token)
+    save_token_to_db(token)
     return token

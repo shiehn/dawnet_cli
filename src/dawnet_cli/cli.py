@@ -2,7 +2,7 @@ import click
 from questionary import select
 import os
 import platform
-from .persistence import set_or_update_token, read_token_from_file, generate_uuid
+from .persistence import set_or_update_token, generate_uuid, read_token_from_db
 from .api import get_remotes
 
 
@@ -51,7 +51,7 @@ def tokens_menu(ctx):
 
         click.echo(f"Token has been updated to: {token}")
     elif selected_action == 'current token':
-        token = read_token_from_file()
+        token = read_token_from_db()
         if token:
             click.echo(f"current token: {token}")
         else:
@@ -145,7 +145,7 @@ def manage_remote(ctx, remote_name, selected_category):
 
 if __name__ == '__main__':
     clear_screen()
-    token = read_token_from_file()
+    token = read_token_from_db()
 
     if token is None:
         print(set_or_update_token(token=generate_uuid()))
