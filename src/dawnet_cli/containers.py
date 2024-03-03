@@ -1,14 +1,37 @@
+import click
 import docker
 import os
-from persistence import save_pid, delete_pid
+from .persistence import save_pid, delete_pid
 
-# Connect to Docker
-client = docker.from_env()
+
+def get_docker_client():
+    try:
+        client = docker.from_env()
+        client.ping()  # This method checks if Docker daemon is accessible
+        return client
+    # except docker.errors.DockerException as e:
+    #     click.echo(f"Failed to connect to Docker: {e}", err=True)
+    #     click.get_current_context().exit(1)
+    except Exception as e:
+        #click.echo(f"An error occurred: {e}", err=True)
+        #click.get_current_context().exit(1)
+        return None
+
+
+# click.echo(f"Failed to connect to Docker: {e}", err=True)
+# click.get_current_context().exit(1)
+
+def docker_check():
+    client = get_docker_client()  # This will exit if Docker is not accessible
+    if client is None:
+        return False
+
+    return True
 
 
 def start_container(image_name, command=None, name=None):
     # Start a Docker container
-    container = client.containers.run(image_name, command=command, name=name, detach=True)
+    container = get_docker_client().containers.run(image_name, command=command, name=name, detach=True)
     print(f"Container {container.id} started.")
 
     # Get PID of the running container
@@ -23,7 +46,7 @@ def start_container(image_name, command=None, name=None):
 
 def stop_container(container_id):
     # Stop a Docker container
-    container = client.containers.get(container_id)
+    container = get_docker_client().containers.get(container_id)
     container.stop()
     print(f"Container {container_id} stopped.")
 
@@ -35,7 +58,7 @@ def stop_container(container_id):
 
 def capture_logs(container_id, log_file_path):
     # Capture container's stdout/stderr to a file
-    container = client.containers.get(container_id)
+    container = get_docker_client().containers.get(container_id)
     logs = container.logs(stream=True)
 
     with open(log_file_path, 'wb') as log_file:

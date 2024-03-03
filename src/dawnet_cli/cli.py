@@ -1,7 +1,11 @@
+import sys
+
 import click
 from questionary import select
 import os
 import platform
+
+from .containers import docker_check
 from .persistence import set_or_update_token, generate_uuid, read_token_from_db
 from .api import get_remotes
 
@@ -145,8 +149,14 @@ def manage_remote(ctx, remote_name, selected_category):
 
 if __name__ == '__main__':
     clear_screen()
-    token = read_token_from_db()
 
+    success = docker_check()
+    if not success:
+        click.echo("Error: Unable to connect to Docker.  Please ensure Docker is installed on the system PATH.")
+        sys.exit(1)  # Exit with error code 1 if Docker is not accessible
+
+
+    token = read_token_from_db()
     if token is None:
         print(set_or_update_token(token=generate_uuid()))
 
