@@ -1,7 +1,7 @@
 import time
 
 from .models import Container
-from .persistence import list_pids
+from .persistence import get_container_states
 
 
 def get_remotes() -> []:

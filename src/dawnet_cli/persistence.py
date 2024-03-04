@@ -50,19 +50,19 @@ conn.commit()
 # Existing UUID Token Table and Functions...
 
 # Updated save_pid function
-def save_pid(pid, container_id, remote_name, status):
+def save_container_state(pid, container_id, remote_name, status):
     cursor.execute("INSERT INTO container_pids (pid, container_id, remote_name, status) VALUES (?, ?, ?, ?)",
                    (pid, container_id, remote_name, status))
     conn.commit()
 
 
 # New update_status function
-def update_status(container_id, status):
+def update_container_state(container_id, status):
     cursor.execute("UPDATE container_pids SET status = ? WHERE container_id = ?", (status, container_id))
     conn.commit()
 
 
-def list_pids(status=None):
+def get_container_states(status=None):
     if status is None:
         cursor.execute("SELECT id, pid, container_id, remote_name, status FROM container_pids")
     else:

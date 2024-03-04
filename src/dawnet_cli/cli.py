@@ -6,8 +6,8 @@ import os
 import platform
 
 from .models import Container
-from .containers import docker_check, start_container, stop_container
-from .persistence import set_or_update_token, generate_uuid, read_token_from_db, list_pids
+from .containers import docker_check, start_container, stop_container, build_image, format_image_name
+from .persistence import set_or_update_token, generate_uuid, read_token_from_db, get_container_states
 from .api import get_remotes
 
 
@@ -109,7 +109,7 @@ def list_remotes(ctx, selected_category):
     remotes = []
 
     if selected_category == 'running':
-        db_containers = list_pids(status=1)
+        db_containers = get_container_states(status=1)
         for db_container in db_containers:
             print(f"PID: {db_container}")
             remotes.append(db_container)
@@ -152,6 +152,8 @@ def manage_remote(ctx, selected_remote, selected_category):
 
     clear_screen()
 
+    print(f"SELECTED CATEGORY: {selected_action}")
+
     if selected_action == 'menu':
         list_categories(ctx)  # Modify to return to the category selection
     elif selected_action == 'run':
@@ -159,8 +161,13 @@ def manage_remote(ctx, selected_remote, selected_category):
     elif selected_action == 'stop':
         #print("F'n STOP")
         stop_container(selected_remote.container_id)
+    elif selected_action == 'install':
+        print("INSTALLL BITCH")
+        formatted_name = format_image_name(selected_remote.remote_name)
+        img_name = build_image(formatted_name, '/home/stevehiehn/dawnet/dawnet_cli/docker_image')
+        print(f"Image build success! Name={img_name}")
     else:
-        print(f"{selected_action} action for {remote_name} not implemented.")
+        print(f"{selected_action} action for {selected_remote.remote_name} not implemented.")
 
 
 if __name__ == '__main__':
