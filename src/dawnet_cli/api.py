@@ -1,9 +1,25 @@
+import time
 
+from .models import Container
+from .persistence import list_pids
 
 
 def get_remotes() -> []:
-    return [
-        'Music Gen - style transfer',
-        'Demucs - stem splitting',
-        'BeatNet - bpm detection',
-    ]
+
+
+    db_container = Container(1, 1, 1, "Hello-Docker", 0)
+
+
+    #
+    # pids = list_pids(status=None)
+    # print(f"Num Of PIDS: {len(pids)}")
+    # for pid in pids:
+    #     print(f"PID: {pid}")
+
+    return [db_container]
+
+    # return [
+    #     'Music Gen - style transfer',
+    #     'Demucs - stem splitting',
+    #     'BeatNet - bpm detection',
+    # ]

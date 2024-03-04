@@ -1,8 +1,9 @@
 import click
 import docker
 import os
-from .persistence import save_pid
+from .persistence import save_pid, update_status
 
+remote_name = "HEllO DOCKER"
 
 def get_docker_client():
     try:
@@ -39,19 +40,21 @@ def start_container(image_name, command=None, name=None):
     pid = container.attrs['State']['Pid']
 
     # Persist PID in SQLite database
-    save_pid(container.id, pid)
+    save_pid(pid, container.id, remote_name, 1)
 
     return container
 
 
 def stop_container(container_id):
+
+    print(f"STOPPING Container {container_id}.")
     # Stop a Docker container
     container = get_docker_client().containers.get(container_id)
     container.stop()
     print(f"Container {container_id} stopped.")
 
-    # Remove PID entry from SQLite database
-    #delete_pid(container_id)
+    status = 0 # STOPPED
+    update_status(container_id, status)
 
     return container
 

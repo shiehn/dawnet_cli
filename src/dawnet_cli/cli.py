@@ -5,8 +5,9 @@ from questionary import select
 import os
 import platform
 
-from .containers import docker_check
-from .persistence import set_or_update_token, generate_uuid, read_token_from_db
+from .models import Container
+from .containers import docker_check, start_container, stop_container
+from .persistence import set_or_update_token, generate_uuid, read_token_from_db, list_pids
 from .api import get_remotes
 
 
@@ -104,26 +105,36 @@ def list_categories(ctx):
 
 
 def list_remotes(ctx, selected_category):
-    remotes = get_remotes()
+
+    remotes = []
+
+    if selected_category == 'running':
+        db_containers = list_pids(status=1)
+        for db_container in db_containers:
+            print(f"PID: {db_container}")
+            remotes.append(db_container)
+    else:
+        remotes = get_remotes()
 
     # Append 'menu' option to the remotes list
-    remotes.append('menu')
+    remotes.append(Container(0, 0, 0, "menu", 0))
 
     selected_remote = select(
         "Select a remote to manage:",
-        choices=remotes,
+        choices=[{"name": container.remote_name, "value": container} for container in remotes],
     ).ask()
+
 
     clear_screen()
 
     if selected_remote:
-        if selected_remote == 'menu':
+        if selected_remote.remote_name == 'menu':
             menu(ctx)
         else:
             manage_remote(ctx, selected_remote, selected_category)
 
 
-def manage_remote(ctx, remote_name, selected_category):
+def manage_remote(ctx, selected_remote, selected_category):
     actions = []
     if selected_category == 'running':
         actions = ['stop', 'menu']
@@ -135,7 +146,7 @@ def manage_remote(ctx, remote_name, selected_category):
         actions = ['run', 'stop', 'install', 'menu']
 
     selected_action = select(
-        f"Select an action for {remote_name}:",
+        f"Select an action for {selected_remote.remote_name}:",
         choices=actions,
     ).ask()
 
@@ -143,6 +154,11 @@ def manage_remote(ctx, remote_name, selected_category):
 
     if selected_action == 'menu':
         list_categories(ctx)  # Modify to return to the category selection
+    elif selected_action == 'run':
+        start_container("hello-docker", command=None, name=None)
+    elif selected_action == 'stop':
+        #print("F'n STOP")
+        stop_container(selected_remote.container_id)
     else:
         print(f"{selected_action} action for {remote_name} not implemented.")
 

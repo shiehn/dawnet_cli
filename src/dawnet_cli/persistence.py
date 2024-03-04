@@ -2,6 +2,8 @@ import sqlite3
 import uuid
 import click
 
+from .models import Container
+
 # Database setup
 db_path = 'docker_containers.db'
 conn = sqlite3.connect(db_path)
@@ -22,6 +24,29 @@ CREATE TABLE IF NOT EXISTS container_pids
 conn.commit()
 
 
+# DELETE ME, JUST ADDING A ROW
+# Prepare the INSERT INTO statement
+insert_query = '''
+INSERT INTO container_pids (pid, container_id, remote_name, status)
+VALUES (?, ?, ?, ?)
+'''
+
+# Values to insert
+# Assuming placeholder values for pid, container_id, and status
+# You should replace these with the actual values you wish to insert
+pid_value = 1  # Example pid value
+container_id_value = "example_container_id"  # Example container ID
+remote_name_value = "Hello Docker"  # The remote_name value you want to insert
+status_value = 0  # Example status value
+
+# Execute the insert query with the values
+cursor.execute(insert_query, (pid_value, container_id_value, remote_name_value, status_value))
+
+# Commit the changes to the database
+conn.commit()
+# END DELETE ME
+
+
 # Existing UUID Token Table and Functions...
 
 # Updated save_pid function
@@ -37,7 +62,6 @@ def update_status(container_id, status):
     conn.commit()
 
 
-# New list_pids function
 def list_pids(status=None):
     if status is None:
         cursor.execute("SELECT id, pid, container_id, remote_name, status FROM container_pids")
@@ -45,7 +69,9 @@ def list_pids(status=None):
         cursor.execute("SELECT id, pid, container_id, remote_name, status FROM container_pids WHERE status = ?",
                        (status,))
 
-    return cursor.fetchall()
+    rows = cursor.fetchall()
+    containers = [Container(*row) for row in rows]
+    return containers
 
 
 # CONNECTION TOKEN ###############################
