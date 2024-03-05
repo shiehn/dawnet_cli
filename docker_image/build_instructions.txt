@@ -1,3 +1,29 @@
-docker build -t hello-docker .
 
-docker run hello-docker
+# BUILD THE IMAGE:
+docker build -t [image name] .
+
+# RUN THE IMAGE:
+docker run -d -p <host_port>:<inside_container_port> [image name]
+
+# TAG THE IMAGE FOR DOCKERHUB:
+docker tag [image name] stevehiehn/[image name]:latest
+
+# DOCKER LOGIN:
+docker login -u stevehiehn
+
+# PUSH TO DOCKERHUB:
+docker push stevehiehn/[image name]:latest
+
+
+
+docker build -t hello-dawnet .
+docker tag hello-dawnet stevehiehn/hello-dawnet:latest
+docker push stevehiehn/hello-dawnet:latest
+
+
+
+#RUN
+docker run hello-dawnet
+
+
+https://raw.githubusercontent.com/shiehn/dawnet-remotes/main/DAWNet_Remote_template.ipynb

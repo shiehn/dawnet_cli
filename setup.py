@@ -10,6 +10,7 @@ setup(
     include_package_data=True,
     install_requires=[
         'click',
+        'docker',
         'questionary',
         # other dependencies
     ],
