@@ -64,21 +64,7 @@ EXPOSE 8888
 CMD ["bash", "/usr/src/app/startup.sh"]
 """)
             # Build Docker image and print logs
-            for chunk in self.docker_client.api.build(path=tmp_dir, tag=image_name, rm=True, dockerfile='Dockerfile', decode=True):
+            for chunk in self.docker_client.api.build(path=tmp_dir, tag=image_name, rm=True, nocache=True, dockerfile='Dockerfile', decode=True):
                 if 'stream' in chunk:
                     print(chunk['stream'].strip())
 
-            # Build Docker image
-            # response = [line for line in self.docker_client.api.build(path=tmp_dir, tag=image_name, rm=True, dockerfile='Dockerfile')]
-            # print("Docker build output:")
-            # for line in response:
-            #     print(line)
-
-            # Clean up is handled by the TemporaryDirectory context manager
-
-# if __name__ == "__main__":
-#     # Example usage
-#     builder = DockerImageBuilder()
-#     notebook_url = "YOUR_NOTEBOOK_URL_HERE"
-#     image_name = "your_image_name_here"
-#     builder.build_docker_image(notebook_url, image_name)

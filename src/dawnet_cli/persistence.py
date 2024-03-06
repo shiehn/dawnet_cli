@@ -30,7 +30,7 @@ def save_container_state(pid, container_id, remote_name, remote_description, ass
     cursor.execute("INSERT INTO container_pids (pid, container_id, remote_name, remote_description, associated_token, status) VALUES (?, ?, ?, ?, ?, ?)",
                    (pid, container_id, remote_name, remote_description, associated_token, status))
     conn.commit()
-    print(f"associated_token: {associated_token}")
+    #print(f"associated_token: {associated_token}")
 
 
 # New update_status function
