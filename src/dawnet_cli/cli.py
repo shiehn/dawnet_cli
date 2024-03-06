@@ -9,6 +9,7 @@ from .models import RemoteContainer
 from .containers import docker_check, start_container, stop_container, build_image, format_image_name, is_container_running, tail_logs
 from .persistence import set_or_update_token, generate_uuid, read_token_from_db, get_container_states
 from .api import get_remote_sources, get_remote_images
+from .builder import DockerImageBuilder
 
 
 def clear_screen():
@@ -26,7 +27,7 @@ def cli(ctx):
 
 
 def menu(ctx):
-    entry_options = ['tokens', 'remotes']
+    entry_options = ['tokens', 'remotes', 'source']
     selected_entry_option = select(
         "Would you like to manage:",
         choices=entry_options,
@@ -38,6 +39,10 @@ def menu(ctx):
         tokens_menu(ctx)
     elif selected_entry_option == 'remotes':
         list_categories(ctx)
+    elif selected_entry_option == 'source':
+        source_menu(ctx)
+    else:
+        click.echo(f"Error: Unexpected selection: {selected_entry_option}")
 
 
 def tokens_menu(ctx):
@@ -69,6 +74,53 @@ def tokens_menu(ctx):
         menu(ctx)
 
     menu(ctx)
+
+def source_menu(ctx):
+    token_actions = ['build', 'menu']
+    selected_action = select(
+        "Source code options:",
+        choices=token_actions,
+    ).ask()
+
+    clear_screen()
+
+    if selected_action == 'build':
+        #TODO validate the url & name
+        source_url = click.prompt("Enter the url of the source code to build", type=str)
+        image_name = click.prompt("Enter a name for the docker image to build", type=str)
+
+        #BUILD THE IMAGE
+        try:
+            builder = DockerImageBuilder()
+            builder.build_docker_image(source_url, image_name)
+        except Exception as e:
+            click.echo(f"Error building the docker image: {e}")
+            menu(ctx)
+
+    else:
+        menu(ctx)
+
+
+    # if selected_action == 'add your token':
+    #     token = click.prompt("Enter the new token", type=str)
+    #     if not set_or_update_token(token):
+    #         menu(ctx)
+    #
+    #     click.echo(f"Token has been updated to: {token}")
+    # elif selected_action == 'view current token':
+    #     token = read_token_from_db()
+    #     if token:
+    #         click.echo(f"CURRENT TOKEN: {token}")
+    #     else:
+    #         click.echo("No token found. A token will be generated.")
+    #         set_or_update_token()
+    # elif selected_action == 'generate a new token':
+    #     new_token = set_or_update_token()
+    #     click.echo(f"New token generated: {new_token}")
+    # elif selected_action == 'menu':
+    #     menu(ctx)
+    #
+    # menu(ctx)
 
 
 # @cli.command()
