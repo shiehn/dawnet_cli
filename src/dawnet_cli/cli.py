@@ -9,7 +9,7 @@ from .models import RemoteContainer
 from .containers import docker_check, start_container, stop_container, build_image, format_image_name, \
     is_container_running, tail_logs
 from .persistence import set_or_update_token, generate_uuid, read_token_from_db, get_container_states
-from .api import get_remote_images
+from .api import get_remote_images,get_remote_sources
 from .builder import DockerImageBuilder
 
 
@@ -78,7 +78,7 @@ def tokens_menu(ctx):
 
 
 def source_menu(ctx):
-    token_actions = ['build', 'menu']
+    token_actions = ['build a remote from source code', 'list registered remote sources', 'menu']
     selected_action = select(
         "Source code options:",
         choices=token_actions,
@@ -86,7 +86,7 @@ def source_menu(ctx):
 
     clear_screen()
 
-    if selected_action == 'build':
+    if selected_action == 'build a remote from source code':
         # TODO validate the url & name
         source_url = click.prompt("Enter the url of the source code to build", type=str)
         image_name = click.prompt("Enter a name for the docker image to build", type=str)
@@ -98,6 +98,19 @@ def source_menu(ctx):
         except Exception as e:
             click.echo(f"Error building the docker image: {e}")
             menu(ctx)
+    elif selected_action == 'list registered remote sources':
+
+        remotes = get_remote_sources()
+
+        # Append 'menu' option to the remotes list
+        #remotes.append(RemoteContainer(0, 0, 0, "menu"))
+        # TODO HANDLE THE REMOTE SOURCES MENU
+
+        selected_remote = select(
+            "Select a remote to manage:",
+            choices=[{"name": f"{container.remote_name} - {container.source_url}", "value": container} for
+                     container in remotes],
+        ).ask()
 
     else:
         menu(ctx)

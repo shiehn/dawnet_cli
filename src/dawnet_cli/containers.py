@@ -106,6 +106,7 @@ def stop_container(container_id):
         container.stop()
     except:
         print(f"Error Stopping container: {container_id}")
+        return
 
     print(f"Container {container_id} stopped.")
 

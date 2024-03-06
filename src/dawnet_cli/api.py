@@ -59,7 +59,31 @@ def get_remote_images() -> []:
         for item in remote_images_data
     ]
 
+    # print(f"base_url: {base_url}")
+    # print(f"Remote Images: {remote_images}")
+
     return remote_images
+
+
+def get_remote_sources() -> []:
+    base_url = os.getenv("DN_CLI_API", "http://34.135.228.111:8081")
+    response = requests.get(f"{base_url}/api/hub/remote-sources/")
+    remote_images_data = response.json()
+
+    remote_sources = [
+        RemoteSource(
+            remote_name=item["remote_name"],
+            remote_description=item["remote_description"],
+            source_url=item["source_url"],
+            remote_version=item["remote_version"]
+        )
+        for item in remote_images_data
+    ]
+
+    # print(f"base_url: {base_url}")
+    # print(f"Remote Images: {remote_sources}")
+
+    return remote_sources
 
 
 def pull_remote_source():

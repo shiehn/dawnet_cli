@@ -22,7 +22,8 @@ class RemoteImage:
 
 
 class RemoteSource:
-    def __init__(self, remote_name: str, source_url: str, remote_version: str):
+    def __init__(self, remote_name: str, remote_description: str, source_url: str, remote_version: str):
         self.remote_name = remote_name
+        self.remote_description = remote_description
         self.source_url = source_url
         self.remote_version = remote_version
