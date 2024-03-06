@@ -67,7 +67,7 @@ CMD ["bash", "/usr/src/app/startup.sh"]
             for chunk in self.docker_client.api.build(path=tmp_dir, tag=image_name, rm=True, dockerfile='Dockerfile', decode=True):
                 if 'stream' in chunk:
                     print(chunk['stream'].strip())
-                    
+
             # Build Docker image
             # response = [line for line in self.docker_client.api.build(path=tmp_dir, tag=image_name, rm=True, dockerfile='Dockerfile')]
             # print("Docker build output:")
