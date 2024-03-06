@@ -19,43 +19,16 @@ CREATE TABLE IF NOT EXISTS container_pids
  pid INTEGER,
  container_id TEXT,
  remote_name TEXT,
+ remote_description TEXT,
  associated_token TEXT,
  status INTEGER)
 ''')
 conn.commit()
 
-
-# DELETE ME, JUST ADDING A ROW
-# Prepare the INSERT INTO statement
-# insert_query = '''
-# INSERT INTO container_pids (pid, container_id, remote_name, associated_token, status)
-# VALUES (?, ?, ?, ?, ?)
-# '''
-#
-# # Values to insert
-# # Assuming placeholder values for pid, container_id, and status
-# # You should replace these with the actual values you wish to insert
-# pid_value = 1  # Example pid value
-# container_id_value = "example_container_id"  # Example container ID
-# remote_name_value = "Hello Docker"  # The remote_name value you want to insert
-# associated_token_value = None
-# status_value = 0  # Example status value
-#
-#
-# # Execute the insert query with the values
-# cursor.execute(insert_query, (pid_value, container_id_value, remote_name_value, associated_token_value, status_value))
-#
-# # Commit the changes to the database
-# conn.commit()
-# # END DELETE ME
-
-
-# Existing UUID Token Table and Functions...
-
 # Updated save_pid function
-def save_container_state(pid, container_id, remote_name, associated_token, status):
-    cursor.execute("INSERT INTO container_pids (pid, container_id, remote_name, associated_token, status) VALUES (?, ?, ?, ?, ?)",
-                   (pid, container_id, remote_name, associated_token, status))
+def save_container_state(pid, container_id, remote_name, remote_description, associated_token, status):
+    cursor.execute("INSERT INTO container_pids (pid, container_id, remote_name, remote_description, associated_token, status) VALUES (?, ?, ?, ?, ?, ?)",
+                   (pid, container_id, remote_name, remote_description, associated_token, status))
     conn.commit()
     print(f"associated_token: {associated_token}")
 
@@ -68,9 +41,9 @@ def update_container_state(container_id, status):
 
 def get_container_states(status=None):
     if status is None:
-        cursor.execute("SELECT id, pid, container_id, remote_name, associated_token, status FROM container_pids")
+        cursor.execute("SELECT id, pid, container_id, remote_name, remote_description, associated_token, status FROM container_pids")
     else:
-        cursor.execute("SELECT id, pid, container_id, remote_name, associated_token, status FROM container_pids WHERE status = ?",
+        cursor.execute("SELECT id, pid, container_id, remote_name, remote_description, associated_token, status FROM container_pids WHERE status = ?",
                        (status,))
 
     rows = cursor.fetchall()

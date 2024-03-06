@@ -3,7 +3,7 @@ import docker
 import os
 from .persistence import save_container_state, update_container_state, read_token_from_db
 import warnings
-remote_name = "HEllO DOCKER"
+
 
 
 def format_image_name(input_str: str) -> str:
@@ -51,7 +51,7 @@ def docker_check():
     return True
 
 
-def start_container(image_name:str, token:str, command=None, name=None):
+def start_container(image_name:str, remote_name:str, remote_description:str,token:str, command=None, name=None):
     # client = get_docker_client()
     # print(f"Pulling image {image_name}...")
     # client.images.pull(image_name)  # Explicitly pull the image
@@ -81,6 +81,7 @@ def start_container(image_name:str, token:str, command=None, name=None):
     save_container_state(pid=pid,
                          container_id=container.id,
                          remote_name=remote_name,
+                         remote_description=remote_description,
                          associated_token=token,
                          status=1)
     #save_container_state(pid, container.id, remote_name, token, 1)
@@ -164,18 +165,18 @@ def tail_logs(container_id):
         print(chunk.decode('utf-8'), end='')
 
 
-if __name__ == "__main__":
-    # Example usage
-    image_name = 'your_image_name_here'
-    command = 'your_command_here'
-    container_name = 'your_container_name_here'
-
-    # Start container
-    container = start_container(image_name=image_name, command=command, name=container_name)
-
-    # Stop container (for demonstration, you might want to add a delay or a condition here)
-    stop_container(container.id)
-
-    # Capture logs
-    log_file_path = f'{container_name}_logs.txt'
-    capture_logs(container.id, log_file_path)
+# if __name__ == "__main__":
+#     # Example usage
+#     image_name = 'your_image_name_here'
+#     command = 'your_command_here'
+#     container_name = 'your_container_name_here'
+#
+#     # Start container
+#     container = start_container(image_name=image_name, command=command, name=container_name)
+#
+#     # Stop container (for demonstration, you might want to add a delay or a condition here)
+#     stop_container(container.id)
+#
+#     # Capture logs
+#     log_file_path = f'{container_name}_logs.txt'
+#     capture_logs(container.id, log_file_path)

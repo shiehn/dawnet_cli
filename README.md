@@ -27,4 +27,6 @@ sudo pip install -U dawnet-cli
 dawnet -h
 ```
 
+**Note:** The CLI will point to the public DAWnet server by default (http://34.135.228.111:8081).  If you are running a private server, you will need to set the environment variable `DN_CLI_API` to the URL of your server with the port.
+
 

@@ -6,9 +6,10 @@ import os
 import platform
 
 from .models import RemoteContainer
-from .containers import docker_check, start_container, stop_container, build_image, format_image_name, is_container_running, tail_logs
+from .containers import docker_check, start_container, stop_container, build_image, format_image_name, \
+    is_container_running, tail_logs
 from .persistence import set_or_update_token, generate_uuid, read_token_from_db, get_container_states
-from .api import get_remote_sources, get_remote_images
+from .api import get_remote_images
 from .builder import DockerImageBuilder
 
 
@@ -75,6 +76,7 @@ def tokens_menu(ctx):
 
     menu(ctx)
 
+
 def source_menu(ctx):
     token_actions = ['build', 'menu']
     selected_action = select(
@@ -85,11 +87,11 @@ def source_menu(ctx):
     clear_screen()
 
     if selected_action == 'build':
-        #TODO validate the url & name
+        # TODO validate the url & name
         source_url = click.prompt("Enter the url of the source code to build", type=str)
         image_name = click.prompt("Enter a name for the docker image to build", type=str)
 
-        #BUILD THE IMAGE
+        # BUILD THE IMAGE
         try:
             builder = DockerImageBuilder()
             builder.build_docker_image(source_url, image_name)
@@ -99,7 +101,6 @@ def source_menu(ctx):
 
     else:
         menu(ctx)
-
 
     # if selected_action == 'add your token':
     #     token = click.prompt("Enter the new token", type=str)
@@ -157,36 +158,39 @@ def list_categories(ctx):
 
 
 def list_remotes(ctx, selected_category):
-
     remotes = []
 
     if selected_category == 'running':
         db_containers = get_container_states(status=1)
         for db_container in db_containers:
-            #print(f"CONTAINER: {db_container}")
+            # print(f"CONTAINER: {db_container}")
             if is_container_running(db_container.container_id):
-                #print(f"PID: {db_container.pid}")
-                #print(f"TOKEN: {db_container.associated_token}")
+                # print(f"PID: {db_container.pid}")
+                # print(f"TOKEN: {db_container.associated_token}")
                 remotes.append(db_container)
             else:
                 stop_container(db_container.container_id)  # Sync the database with the actual state
 
         # Append 'menu' option to the remotes list
-        remotes.append(RemoteContainer(0, 0, 0, "menu", 0))
+        remotes.append(RemoteContainer(0, 0, 0, "menu", ""))
 
         selected_remote = select(
             "Select a remote to manage:",
-            choices=[{"name": f"{container.remote_name} [{container.associated_token}]", "value": container} for container in remotes],
+            choices=[
+                {"name": f"{container.remote_name} - {container.remote_description} [{container.associated_token}]",
+                 "value": container} for
+                container in remotes],
         ).ask()
     else:
         remotes = get_remote_images()
 
         # Append 'menu' option to the remotes list
-        remotes.append(RemoteContainer(0, 0, 0, "menu", 0))
+        remotes.append(RemoteContainer(0, 0, 0, "menu"))
 
         selected_remote = select(
             "Select a remote to manage:",
-            choices=[{"name": f"{container.remote_name}", "value": container} for container in remotes],
+            choices=[{"name": f"{container.remote_name} - {container.remote_description}", "value": container} for
+                     container in remotes],
         ).ask()
 
     clear_screen()
@@ -199,7 +203,6 @@ def list_remotes(ctx, selected_category):
 
 
 def manage_remote(ctx, selected_remote, selected_category):
-
     # running == running remote_images -> STOP
     # available == remote_source -> INSTALL (build)
     # installed == remote_images -> RUN
@@ -217,15 +220,15 @@ def manage_remote(ctx, selected_remote, selected_category):
 
     clear_screen()
 
-    #print(f"SELECTED CATEGORY: {selected_action}")
+    # print(f"SELECTED CATEGORY: {selected_action}")
 
     if selected_action == 'menu':
         list_categories(ctx)  # Modify to return to the category selection
     elif selected_action == 'run':
-        #start_container("hello-docker", command=None, name=None)
-        start_container(selected_remote.image_name, read_token_from_db())
+        # start_container("hello-docker", command=None, name=None)
+        start_container(selected_remote.image_name, selected_remote.remote_name, selected_remote.remote_description, read_token_from_db())
     elif selected_action == 'stop':
-        #print("F'n STOP")
+        # print("F'n STOP")
         stop_container(selected_remote.container_id)
     elif selected_action == 'logs':
         tail_logs(selected_remote.container_id)
@@ -243,9 +246,8 @@ if __name__ == '__main__':
 
     success = docker_check()
     if not success:
-        click.echo("Error: Unable to connect to Docker.  Please ensure Docker is installed on the system PATH.")
+        click.echo("Error: Unable to connect to Docker.  Please ensure Docker is RUNNING and on the system PATH.")
         sys.exit(1)  # Exit with error code 1 if Docker is not accessible
-
 
     token = read_token_from_db()
     if token is None:

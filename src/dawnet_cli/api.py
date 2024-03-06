@@ -1,6 +1,8 @@
+import os
 import time
+import requests
 
-from .models import RemoteContainer, RemoteImage
+from .models import RemoteContainer, RemoteImage, RemoteSource
 from .persistence import get_container_states
 
 
@@ -25,13 +27,39 @@ def get_remote_sources() -> []:
     #     'BeatNet - bpm detection',
     # ]
 
+
+
+# http://localhost:8081/api/hub/remote-images/
+# [
+#     {
+#         "id": "d7ae7bd2-45b3-4ca9-972b-5b5805158067",
+#         "remote_name": "Hello DAWnet",
+#         "remote_description": "DAWNet test image",
+#         "remote_category": "template",
+#         "remote_author": "Steve Hiehn",
+#         "image_name": "stevehiehn/hello-dawnet",
+#         "remote_version": "v0",
+#         "created_at": "2024-03-06T06:13:38",
+#         "updated_at": "2024-03-06T06:13:38"
+#     }
+# ]
+
 def get_remote_images() -> []:
-    # stevehiehn/hello-dawnet
-    # remote_name: str, image_name: str, remote_version: str
+    base_url = os.getenv("DN_CLI_API", "http://34.135.228.111:8081")
+    response = requests.get(f"{base_url}/api/hub/remote-images/")
+    remote_images_data = response.json()
 
-    db_remote_image = RemoteImage(remote_name="hello dawnet", image_name="stevehiehn/hello-dawnet", remote_version="1")
+    remote_images = [
+        RemoteImage(
+            remote_name=item["remote_name"],
+            remote_description=item["remote_description"],
+            image_name=item["image_name"],
+            remote_version=item["remote_version"]
+        )
+        for item in remote_images_data
+    ]
 
-    return [db_remote_image]
+    return remote_images
 
 
 def pull_remote_source():
