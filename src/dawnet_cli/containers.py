@@ -1,9 +1,35 @@
+import sys
+
 import click
 import docker
+from docker.models.containers import Container
 import os
 from .persistence import save_container_state, update_container_state, read_token_from_db
 import warnings
+import subprocess
+import json
 
+
+def check_nvidia_docker_installed():
+    try:
+        # Run 'docker info' and capture the output
+        result = subprocess.run(['docker', 'info', '--format', '{{json .}}'], stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE, text=True)
+
+        if result.returncode == 0:
+            docker_info = json.loads(result.stdout)
+
+            # Check for 'nvidia' in Runtimes
+            if 'Runtimes' in docker_info and 'nvidia' in docker_info['Runtimes']:
+                return True
+            else:
+                return False
+        else:
+            print(f"Error running 'docker info': {result.stderr}")
+            return False
+    except Exception as e:
+        print(f"Exception occurred: {e}")
+        return False
 
 
 def format_image_name(input_str: str) -> str:
@@ -51,22 +77,31 @@ def docker_check():
     return True
 
 
-def start_container(image_name:str, remote_name:str, remote_description:str,token:str, command=None, name=None):
-    # client = get_docker_client()
-    # print(f"Pulling image {image_name}...")
-    # client.images.pull(image_name)  # Explicitly pull the image
-    # print(f"Image {image_name} pulled successfully.")
+def start_container(image_name: str, remote_name: str, remote_description: str, token: str, gpu: bool = False,
+                    command=None, name=None) -> Container:
+    # Check for GPU support if required
+    if gpu and not check_nvidia_docker_installed():
+        sys.exit(
+            "Error: GPU requested but the `nvidia-docker` extension was not found on this machine. Please follow Nvidia's install instructions: https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html")
 
+    # Get Docker client
+    client = docker.from_env()
 
-    # Start a Docker container
-    container = get_docker_client().containers.run(
+    # Device requests for GPU
+    device_requests = None
+    if gpu:
+        device_requests = [docker.types.DeviceRequest(count=-1, capabilities=[['gpu']])]
+
+    # Run the container
+    container = client.containers.run(
         image_name,
         command=command,
         name=name,
         detach=True,
         environment={
-            'DN_CLI_TOKEN': read_token_from_db()
-        }
+            'DN_CLI_TOKEN': token
+        },
+        device_requests=device_requests  # Add device requests here
     )
 
     print(f"Container {container.id} started.")
@@ -84,7 +119,7 @@ def start_container(image_name:str, remote_name:str, remote_description:str,toke
                          remote_description=remote_description,
                          associated_token=token,
                          status=1)
-    #save_container_state(pid, container.id, remote_name, token, 1)
+    # save_container_state(pid, container.id, remote_name, token, 1)
 
     return container
 
@@ -148,6 +183,7 @@ def build_image(image_name: str, path_to_dockerfile: str):
 
     return None
 
+
 def capture_logs(container_id, log_file_path):
     # Capture container's stdout/stderr to a file
     container = get_docker_client().containers.get(container_id)
@@ -157,6 +193,7 @@ def capture_logs(container_id, log_file_path):
         for chunk in logs:
             log_file.write(chunk)
 
+
 def tail_logs(container_id):
     # Tail container's stdout/stderr to the terminal
     container = get_docker_client().containers.get(container_id)
@@ -164,20 +201,3 @@ def tail_logs(container_id):
 
     for chunk in logs:
         print(chunk.decode('utf-8'), end='')
-
-
-# if __name__ == "__main__":
-#     # Example usage
-#     image_name = 'your_image_name_here'
-#     command = 'your_command_here'
-#     container_name = 'your_container_name_here'
-#
-#     # Start container
-#     container = start_container(image_name=image_name, command=command, name=container_name)
-#
-#     # Stop container (for demonstration, you might want to add a delay or a condition here)
-#     stop_container(container.id)
-#
-#     # Capture logs
-#     log_file_path = f'{container_name}_logs.txt'
-#     capture_logs(container.id, log_file_path)

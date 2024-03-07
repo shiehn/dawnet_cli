@@ -1,5 +1,4 @@
 import sys
-
 import click
 from questionary import select
 import os
@@ -207,11 +206,17 @@ def list_remotes(ctx, selected_category):
 
 
 def manage_remote(ctx, selected_remote, selected_category):
+    action_run_cpu = 'run (with cpu)'
+    action_run_gpu = 'run (with gpu)'
+    action_logs = 'logs (display the remote logs)'
+    action_stop = 'stop (the running remote)'
+    action_menu = 'menu'
+
     actions = []
     if selected_category == 'running':
-        actions = ['stop', 'logs', 'menu']
+        actions = [action_stop, action_logs, action_menu]
     elif selected_category == 'available':
-        actions = ['run', 'menu']
+        actions = [action_run_cpu, action_run_gpu, action_menu]
 
     selected_action = select(
         f"Select an action for {selected_remote.remote_name}:",
@@ -220,18 +225,19 @@ def manage_remote(ctx, selected_remote, selected_category):
 
     clear_screen()
 
-    # print(f"SELECTED CATEGORY: {selected_action}")
-
     if selected_action == 'menu':
         list_categories(ctx)  # Modify to return to the category selection
-    elif selected_action == 'run':
+    elif selected_action == action_run_cpu or selected_action == action_run_gpu:
         # start_container("hello-docker", command=None, name=None)
+
+        use_gpu = True if selected_action == action_run_gpu else False
+
         start_container(selected_remote.image_name, selected_remote.remote_name, selected_remote.remote_description,
-                        read_token_from_db())
-    elif selected_action == 'stop':
+                        read_token_from_db(), use_gpu)
+    elif selected_action == action_stop:
         # print("F'n STOP")
         stop_container(selected_remote.container_id)
-    elif selected_action == 'logs':
+    elif selected_action == action_logs:
         tail_logs(selected_remote.container_id)
     elif selected_action == 'install':
         print("INSTALLL BITCH")
