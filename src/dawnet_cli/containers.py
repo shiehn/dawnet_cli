@@ -65,7 +65,7 @@ def start_container(image_name:str, remote_name:str, remote_description:str,toke
         name=name,
         detach=True,
         environment={
-            'DN_CLIENT_TOKEN': read_token_from_db()
+            'DN_CLI_TOKEN': read_token_from_db()
         }
     )
 
