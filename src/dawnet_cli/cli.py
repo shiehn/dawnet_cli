@@ -5,7 +5,7 @@ from questionary import select
 import os
 import platform
 
-from .models import RemoteContainer
+from .models import RemoteContainer, RemoteSource
 from .containers import docker_check, start_container, stop_container, build_image, format_image_name, \
     is_container_running, tail_logs
 from .persistence import set_or_update_token, generate_uuid, read_token_from_db, get_container_states
@@ -111,17 +111,27 @@ def source_menu(ctx):
         except Exception as e:
             click.echo(f"Error building the docker image: {e}")
             menu(ctx)
-    elif selected_action == 'list registered remote sources':
+    elif selected_action == option_list:
 
         remotes = get_remote_sources()
 
-        # Append 'menu' option to the remotes list
-        #remotes.append(RemoteContainer(0, 0, 0, "menu"))
-        # TODO HANDLE THE REMOTE SOURCES MENU
+        remotes.append(
+            RemoteSource(
+                remote_name='menu',
+                remote_description='',
+                source_url='',
+                remote_version=''
+            )
+        )
+
+        #remotes.append(RemoteContainer(0, 0, 0, "menu", ""))
 
         selected_remote = select(
-            "Select a remote to manage:",
-            choices=[{"name": f"{container.remote_name} - {container.source_url}", "value": container} for
+            "Manage a remote source:",
+            choices=[
+                {"name": "menu", "value": container} if container.remote_name == "menu"
+                else
+                {"name": f"{container.remote_name} - {container.source_url}", "value": container} for
                      container in remotes],
         ).ask()
 
@@ -200,12 +210,22 @@ def list_remotes(ctx, selected_category):
         # Append 'menu' option to the remotes list
         remotes.append(RemoteContainer(0, 0, 0, "menu", ""))
 
+        # selected_remote = select(
+        #     "Select a remote to manage:",
+        #     choices=[
+        #         {"name": f"{container.remote_name} - {container.remote_description} [{container.associated_token}]",
+        #          "value": container} for
+        #         container in remotes],
+        # ).ask()
+
         selected_remote = select(
-            "Select a remote to manage:",
+            "Select a running remote:",
             choices=[
-                {"name": f"{container.remote_name} - {container.remote_description} [{container.associated_token}]",
-                 "value": container} for
-                container in remotes],
+                {"name": "menu", "value": container} if container.remote_name == "menu"
+                else {"name": f"{container.remote_name} - {container.remote_description} [{container.associated_token}]",
+                      "value": container} for
+                container in remotes
+            ],
         ).ask()
     else:
         remotes = get_remote_images()
@@ -215,9 +235,13 @@ def list_remotes(ctx, selected_category):
 
         selected_remote = select(
             "Select a remote to manage:",
-            choices=[{"name": f"{container.remote_name} - {container.remote_description}", "value": container} for
-                     container in remotes],
+            choices=[
+                {"name": "menu", "value": container} if container.remote_name == "menu"
+                else {"name": f"{container.remote_name} - {container.remote_description}", "value": container}
+                for container in remotes
+            ],
         ).ask()
+
 
     clear_screen()
 
