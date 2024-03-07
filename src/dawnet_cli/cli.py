@@ -28,19 +28,24 @@ def cli(ctx):
 
 
 def menu(ctx):
-    entry_options = ['tokens', 'remotes', 'source']
+    option_title = "Welcome to DAWnet!"
+    option_tokens = 'tokens (connect your remotes)'
+    option_remotes = 'remotes (ready to run)'
+    option_sources = 'sources (ready to build)'
+
+    entry_options = [option_tokens, option_remotes, option_sources]
     selected_entry_option = select(
-        "Would you like to manage:",
+        option_title,
         choices=entry_options,
     ).ask()
 
     clear_screen()
 
-    if selected_entry_option == 'tokens':
+    if selected_entry_option == option_tokens:
         tokens_menu(ctx)
-    elif selected_entry_option == 'remotes':
+    elif selected_entry_option == option_remotes:
         list_categories(ctx)
-    elif selected_entry_option == 'source':
+    elif selected_entry_option == option_sources:
         source_menu(ctx)
     else:
         click.echo(f"Error: Unexpected selection: {selected_entry_option}")
@@ -78,15 +83,23 @@ def tokens_menu(ctx):
 
 
 def source_menu(ctx):
-    token_actions = ['build a remote from source code', 'list registered remote sources', 'menu']
+    title = 'Welcome to DAWnet! (Source Code)'
+    option_build = 'build (remotes from source code)'
+    option_list = 'list (remote source code)'
+    option_menu = 'menu'
+
+    token_actions = [
+        option_build,
+        option_list,
+        option_menu]
     selected_action = select(
-        "Source code options:",
+        title,
         choices=token_actions,
     ).ask()
 
     clear_screen()
 
-    if selected_action == 'build a remote from source code':
+    if selected_action == option_build:
         # TODO validate the url & name
         source_url = click.prompt("Enter the url of the source code to build", type=str)
         image_name = click.prompt("Enter a name for the docker image to build", type=str)
