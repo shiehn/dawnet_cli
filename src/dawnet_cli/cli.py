@@ -125,14 +125,25 @@ def source_menu(ctx):
 
         # remotes.append(RemoteContainer(0, 0, 0, "menu", ""))
 
-        selected_remote = select(
-            "Manage a remote source:",
+        selected_source = select(
+            "Build an image from source code:",
             choices=[
                 {"name": "menu", "value": container} if container.remote_name == "menu"
                 else
                 {"name": f"{container.remote_name} - {container.source_url}", "value": container} for
                 container in remotes],
         ).ask()
+
+        image_name = click.prompt("Name the docker image you are building", type=str)
+
+        # BUILD THE IMAGE
+        try:
+            builder = DockerImageBuilder()
+            builder.build_docker_image(selected_source.source_url, image_name)
+            click.echo(f"Image build success! Image Name = {image_name}")
+        except Exception as e:
+            click.echo(f"Error building the docker image: {e}")
+            menu(ctx)
 
     else:
         menu(ctx)
@@ -228,22 +239,23 @@ def manage_remote(ctx, selected_remote, selected_category):
     if selected_action == 'menu':
         list_categories(ctx)  # Modify to return to the category selection
     elif selected_action == action_run_cpu or selected_action == action_run_gpu:
-        # start_container("hello-docker", command=None, name=None)
-
         use_gpu = True if selected_action == action_run_gpu else False
 
         start_container(selected_remote.image_name, selected_remote.remote_name, selected_remote.remote_description,
                         read_token_from_db(), use_gpu)
+        menu(ctx)
     elif selected_action == action_stop:
         # print("F'n STOP")
         stop_container(selected_remote.container_id)
+        menu(ctx)
     elif selected_action == action_logs:
         tail_logs(selected_remote.container_id)
-    elif selected_action == 'install':
-        print("INSTALLL BITCH")
-        formatted_name = format_image_name(selected_remote.remote_name)
-        img_name = build_image(formatted_name, '/home/stevehiehn/dawnet/dawnet_cli/docker_image')
-        print(f"Image build success! Name={img_name}")
+        menu(ctx)
+    # elif selected_action == 'install':
+    #     print("INSTALLL BITCH")
+    #     formatted_name = format_image_name(selected_remote.remote_name)
+    #     img_name = build_image(formatted_name, '/home/stevehiehn/dawnet/dawnet_cli/docker_image')
+    #     print(f"Image build success! Name={img_name}")
     else:
         print(f"{selected_action} action for {selected_remote.remote_name} not implemented.")
 

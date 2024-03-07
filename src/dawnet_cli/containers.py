@@ -81,8 +81,9 @@ def start_container(image_name: str, remote_name: str, remote_description: str, 
                     command=None, name=None) -> Container:
     # Check for GPU support if required
     if gpu and not check_nvidia_docker_installed():
-        sys.exit(
+        click.echo(
             "Error: GPU requested but the `nvidia-docker` extension was not found on this machine. Please follow Nvidia's install instructions: https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html")
+        return None
 
     # Get Docker client
     client = docker.from_env()
@@ -104,13 +105,11 @@ def start_container(image_name: str, remote_name: str, remote_description: str, 
         device_requests=device_requests  # Add device requests here
     )
 
-    print(f"Container {container.id} started.")
-
     # Get PID of the running container
     container.reload()  # Reload to update attributes
     pid = container.attrs['State']['Pid']
 
-    print(f"Container started with token: {token}")
+    print(f"Container started with Token: {token}")
 
     # Persist PID in SQLite database
     save_container_state(pid=pid,
