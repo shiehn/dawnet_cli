@@ -5,8 +5,7 @@ import os
 import platform
 
 from .models import RemoteContainer, RemoteSource
-from .containers import docker_check, start_container, stop_container, build_image, format_image_name, \
-    is_container_running, tail_logs
+from .containers import docker_check, start_container, stop_container, is_container_running, tail_logs
 from .persistence import set_or_update_token, generate_uuid, read_token_from_db, get_container_states
 from .api import get_remote_images, get_remote_sources
 from .builder import DockerImageBuilder
@@ -31,8 +30,9 @@ def menu(ctx):
     option_tokens = 'tokens (connect your remotes)'
     option_remotes = 'remotes (ready to run)'
     option_sources = 'sources (ready to build)'
+    option_docker = 'docker-images (publish or run)'
 
-    entry_options = [option_tokens, option_remotes, option_sources]
+    entry_options = [option_tokens, option_remotes, option_sources, option_docker]
     selected_entry_option = select(
         option_title,
         choices=entry_options,
@@ -43,7 +43,9 @@ def menu(ctx):
     if selected_entry_option == option_tokens:
         tokens_menu(ctx)
     elif selected_entry_option == option_remotes:
-        list_categories(ctx)
+        remote_menu(ctx)
+    elif selected_entry_option == option_docker:
+        docker_menu(ctx)
     elif selected_entry_option == option_sources:
         source_menu(ctx)
     else:
@@ -81,15 +83,28 @@ def tokens_menu(ctx):
     menu(ctx)
 
 
+# options
+option_menu = 'menu'
+
+# source options
+option_source_build = 'build (remotes from source code)'
+option_source_list = 'list (remote source code)'
+
+# remote options
+option_remote_running = 'running (active remotes)'
+option_remote_available = 'available (to run remotes)'
+
+# docker options
+option_docker_run = 'run (a docker-image as a dawnet remote)'
+option_docker_publish = 'publish (a docker-image as a dawnet remote)'
+
+
 def source_menu(ctx):
     title = 'Welcome to DAWnet! (Source Code)'
-    option_build = 'build (remotes from source code)'
-    option_list = 'list (remote source code)'
-    option_menu = 'menu'
 
     token_actions = [
-        option_build,
-        option_list,
+        option_source_build,
+        option_source_list,
         option_menu]
     selected_action = select(
         title,
@@ -98,7 +113,7 @@ def source_menu(ctx):
 
     clear_screen()
 
-    if selected_action == option_build:
+    if selected_action == option_source_build:
         # TODO validate the url & name
         source_url = click.prompt("Enter the url of the source code to build", type=str)
         image_name = click.prompt("Enter a name for the docker image to build", type=str)
@@ -110,13 +125,13 @@ def source_menu(ctx):
         except Exception as e:
             click.echo(f"Error building the docker image: {e}")
             menu(ctx)
-    elif selected_action == option_list:
+    elif selected_action == option_source_list:
 
         remotes = get_remote_sources()
 
         remotes.append(
             RemoteSource(
-                remote_name='menu',
+                remote_name=option_menu,
                 remote_description='',
                 source_url='',
                 remote_version=''
@@ -134,6 +149,10 @@ def source_menu(ctx):
                 container in remotes],
         ).ask()
 
+        if selected_source.remote_name == 'menu':
+            clear_screen()
+            menu(ctx)
+
         image_name = click.prompt("Name the docker image you are building", type=str)
 
         # BUILD THE IMAGE
@@ -149,26 +168,46 @@ def source_menu(ctx):
         menu(ctx)
 
 
-def list_categories(ctx):
-    category_options = ['running', 'available', 'menu']
+def remote_menu(ctx):
+    title = 'List remotes'
+    option_menu = 'menu'
+
+    category_options = [option_remote_running, option_remote_available, 'menu']
     selected_category = select(
-        "List remotes:",
+        title,
         choices=category_options,
     ).ask()
 
     clear_screen()
 
     if selected_category:
-        if selected_category == 'menu':
+        if selected_category == option_menu:
             menu(ctx)
 
         list_remotes(ctx, selected_category)
 
 
-def list_remotes(ctx, selected_category):
+def docker_menu(ctx):
+    title = 'Docker image actions'
+    category_options = [option_docker_run, option_docker_publish, option_menu]
+    selected_category = select(
+        title,
+        choices=category_options,
+    ).ask()
+
+    clear_screen()
+
+    if selected_category:
+        if selected_category == option_menu:
+            menu(ctx)
+
+        list_docker_images(ctx, selected_category)
+
+
+def list_docker_images(ctx, selected_category):
     remotes = []
 
-    if selected_category == 'running':
+    if selected_category == option_docker_run:
         db_containers = get_container_states(status=1)
         for db_container in db_containers:
             # print(f"CONTAINER: {db_container}")
@@ -182,10 +221,44 @@ def list_remotes(ctx, selected_category):
         # Append 'menu' option to the remotes list
         remotes.append(RemoteContainer(0, 0, 0, "menu", ""))
 
+        select(
+            "Select a running remote:",
+            choices=[
+                {"name": option_menu, "value": container} if container.remote_name == option_menu
+                else {
+                    "name": f"{container.remote_name} - {container.remote_description} [{container.associated_token}]",
+                    "value": container} for
+                container in remotes
+            ],
+        ).ask()
+    elif selected_category == option_docker_publish:
+        click.prompt("Not implemented yet", type=str)
+        menu(ctx)
+    else:
+        menu(ctx)
+
+
+def list_remotes(ctx, selected_category):
+    remotes = []
+
+    if selected_category == option_remote_running:
+        db_containers = get_container_states(status=1)
+        for db_container in db_containers:
+            # print(f"CONTAINER: {db_container}")
+            if is_container_running(db_container.container_id):
+                # print(f"PID: {db_container.pid}")
+                # print(f"TOKEN: {db_container.associated_token}")
+                remotes.append(db_container)
+            else:
+                stop_container(db_container.container_id)  # Sync the database with the actual state
+
+        # Append 'menu' option to the remotes list
+        remotes.append(RemoteContainer(0, 0, 0, option_menu, ""))
+
         selected_remote = select(
             "Select a running remote:",
             choices=[
-                {"name": "menu", "value": container} if container.remote_name == "menu"
+                {"name": option_menu, "value": container} if container.remote_name == option_menu
                 else {
                     "name": f"{container.remote_name} - {container.remote_description} [{container.associated_token}]",
                     "value": container} for
@@ -196,12 +269,12 @@ def list_remotes(ctx, selected_category):
         remotes = get_remote_images()
 
         # Append 'menu' option to the remotes list
-        remotes.append(RemoteContainer(0, 0, 0, "menu"))
+        remotes.append(RemoteContainer(0, 0, 0, option_menu))
 
         selected_remote = select(
             "Select a remote to manage:",
             choices=[
-                {"name": "menu", "value": container} if container.remote_name == "menu"
+                {"name": option_menu, "value": container} if container.remote_name == option_menu
                 else {"name": f"{container.remote_name} - {container.remote_description}", "value": container}
                 for container in remotes
             ],
@@ -210,7 +283,7 @@ def list_remotes(ctx, selected_category):
     clear_screen()
 
     if selected_remote:
-        if selected_remote.remote_name == 'menu':
+        if selected_remote.remote_name == option_menu:
             menu(ctx)
         else:
             manage_remote(ctx, selected_remote, selected_category)
@@ -223,10 +296,12 @@ def manage_remote(ctx, selected_remote, selected_category):
     action_stop = 'stop (the running remote)'
     action_menu = 'menu'
 
+    print(f"MANAGE REMOTE: selected_category={selected_category} selected_remote={selected_remote.remote_name}")
+
     actions = []
-    if selected_category == 'running':
+    if selected_category == option_remote_running:
         actions = [action_stop, action_logs, action_menu]
-    elif selected_category == 'available':
+    elif selected_category == option_remote_available:
         actions = [action_run_cpu, action_run_gpu, action_menu]
 
     selected_action = select(
@@ -236,8 +311,8 @@ def manage_remote(ctx, selected_remote, selected_category):
 
     clear_screen()
 
-    if selected_action == 'menu':
-        list_categories(ctx)  # Modify to return to the category selection
+    if selected_action == option_menu:
+        remote_menu(ctx)  # Modify to return to the category selection
     elif selected_action == action_run_cpu or selected_action == action_run_gpu:
         use_gpu = True if selected_action == action_run_gpu else False
 
