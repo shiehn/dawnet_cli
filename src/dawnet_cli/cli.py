@@ -300,6 +300,8 @@ def list_docker_images(ctx, selected_action):
                 use_gpu,
             )
 
+            menu(ctx)
+
     elif selected_action == option_docker_publish:
         click.echo("PUBLISH is currently in development. Check back soon.")
         menu(ctx)
@@ -421,13 +423,13 @@ def manage_remote(ctx, selected_remote, selected_category):
         )
 
 
-if __name__ == "__main__":
+def main():
     clear_screen()
 
     success = docker_check()
     if not success:
         click.echo(
-            "Error: Unable to connect to Docker.  Please ensure Docker is RUNNING and on the system PATH."
+            "Error: Unable to connect to Docker. Please ensure Docker is RUNNING and on the system PATH."
         )
         sys.exit(1)  # Exit with error code 1 if Docker is not accessible
 
@@ -436,3 +438,7 @@ if __name__ == "__main__":
         print(set_or_update_token(token=generate_uuid()))
 
     cli()
+
+
+if __name__ == "__main__":
+    main()

@@ -4,6 +4,8 @@ A python CLI used to setup &amp; manage [DAWnet](https://dawnet.tools/) remote s
 ### Requirements:
 
 - ensure Python >= 3.x is installed
+- ensure https://www.docker.com/ is installed
+- (if you plan to run GPU dependent functions) ensure [Nvidia Docker Extention](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) is installed
 
 ```python
 python --version

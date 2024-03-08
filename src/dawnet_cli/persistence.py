@@ -1,11 +1,26 @@
 import sqlite3
 import uuid
 import click
-
+import os
+from appdirs import user_data_dir
 from .models import RemoteContainer
 
 # Database setup
-db_path = 'docker_containers.db'
+# Name of your application
+appname = "dawnet_cli"
+appauthor = "dawnet"
+
+# Determine platform-specific user data directory
+data_dir = user_data_dir(appname, appauthor)
+
+# Ensure the directory exists
+os.makedirs(data_dir, exist_ok=True)
+
+# Path to the SQLite database within the data directory
+db_path = os.path.join(data_dir, "dawnet_cli.db")
+
+
+# Connect to the SQLite database
 conn = sqlite3.connect(db_path)
 cursor = conn.cursor()
 
@@ -13,7 +28,8 @@ cursor = conn.cursor()
 
 # Create table for storing container PIDs
 # Update the container_pids table schema
-cursor.execute('''
+cursor.execute(
+    """
 CREATE TABLE IF NOT EXISTS container_pids
 (id INTEGER PRIMARY KEY,
  pid INTEGER,
@@ -22,29 +38,42 @@ CREATE TABLE IF NOT EXISTS container_pids
  remote_description TEXT,
  associated_token TEXT,
  status INTEGER)
-''')
+"""
+)
 conn.commit()
 
+
 # Updated save_pid function
-def save_container_state(pid, container_id, remote_name, remote_description, associated_token, status):
-    cursor.execute("INSERT INTO container_pids (pid, container_id, remote_name, remote_description, associated_token, status) VALUES (?, ?, ?, ?, ?, ?)",
-                   (pid, container_id, remote_name, remote_description, associated_token, status))
+def save_container_state(
+    pid, container_id, remote_name, remote_description, associated_token, status
+):
+    cursor.execute(
+        "INSERT INTO container_pids (pid, container_id, remote_name, remote_description, associated_token, status) VALUES (?, ?, ?, ?, ?, ?)",
+        (pid, container_id, remote_name, remote_description, associated_token, status),
+    )
     conn.commit()
-    #print(f"associated_token: {associated_token}")
+    # print(f"associated_token: {associated_token}")
 
 
 # New update_status function
 def update_container_state(container_id, status):
-    cursor.execute("UPDATE container_pids SET status = ? WHERE container_id = ?", (status, container_id))
+    cursor.execute(
+        "UPDATE container_pids SET status = ? WHERE container_id = ?",
+        (status, container_id),
+    )
     conn.commit()
 
 
 def get_container_states(status=None):
     if status is None:
-        cursor.execute("SELECT id, pid, container_id, remote_name, remote_description, associated_token, status FROM container_pids")
+        cursor.execute(
+            "SELECT id, pid, container_id, remote_name, remote_description, associated_token, status FROM container_pids"
+        )
     else:
-        cursor.execute("SELECT id, pid, container_id, remote_name, remote_description, associated_token, status FROM container_pids WHERE status = ?",
-                       (status,))
+        cursor.execute(
+            "SELECT id, pid, container_id, remote_name, remote_description, associated_token, status FROM container_pids WHERE status = ?",
+            (status,),
+        )
 
     rows = cursor.fetchall()
     containers = [RemoteContainer(*row) for row in rows]
@@ -54,9 +83,11 @@ def get_container_states(status=None):
 # CONNECTION TOKEN ###############################
 
 # Extend the database schema to include a table for the UUID token
-cursor.execute('''
+cursor.execute(
+    """
 CREATE TABLE IF NOT EXISTS uuid_token
-(id INTEGER PRIMARY KEY, token TEXT)''')
+(id INTEGER PRIMARY KEY, token TEXT)"""
+)
 conn.commit()
 
 
