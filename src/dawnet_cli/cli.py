@@ -1,5 +1,6 @@
 import sys
 import click
+import docker
 from questionary import select
 import os
 import platform
@@ -208,21 +209,18 @@ def list_docker_images(ctx, selected_category):
     remotes = []
 
     if selected_category == option_docker_run:
-        db_containers = get_container_states(status=1)
-        for db_container in db_containers:
-            # print(f"CONTAINER: {db_container}")
-            if is_container_running(db_container.container_id):
-                # print(f"PID: {db_container.pid}")
-                # print(f"TOKEN: {db_container.associated_token}")
-                remotes.append(db_container)
-            else:
-                stop_container(db_container.container_id)  # Sync the database with the actual state
+        client = docker.from_env()
+        images = client.images.list()
+        # Extract the tags of the images, but only include images with tags
+        image_tags = [tag for image in images if image.tags for tag in image.tags]
+        for image in image_tags:
+            remotes.append(RemoteContainer(0, 0, 0, image, ''))
 
         # Append 'menu' option to the remotes list
         remotes.append(RemoteContainer(0, 0, 0, "menu", ""))
 
-        select(
-            "Select a running remote:",
+        selected_docker_image = select(
+            "Select a local docker image to run as a remote",
             choices=[
                 {"name": option_menu, "value": container} if container.remote_name == option_menu
                 else {
@@ -231,6 +229,12 @@ def list_docker_images(ctx, selected_category):
                 container in remotes
             ],
         ).ask()
+
+        clear_screen()
+
+        start_container(selected_docker_image.remote_name, selected_docker_image.remote_name, selected_docker_image.remote_description, read_token_from_db(), False)
+
+
     elif selected_category == option_docker_publish:
         click.prompt("Not implemented yet", type=str)
         menu(ctx)

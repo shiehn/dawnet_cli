@@ -1,10 +1,7 @@
-import sys
-
 import click
 import docker
 from docker.models.containers import Container
-import os
-from .persistence import save_container_state, update_container_state, read_token_from_db
+from .persistence import save_container_state, update_container_state
 import warnings
 import subprocess
 import json
@@ -60,7 +57,7 @@ def get_docker_client():
     # except docker.errors.DockerException as e:
     #     click.echo(f"Failed to connect to Docker: {e}", err=True)
     #     click.get_current_context().exit(1)
-    except Exception as e:
+    except Exception:
         # click.echo(f"An error occurred: {e}", err=True)
         # click.get_current_context().exit(1)
         return None
@@ -133,8 +130,6 @@ def is_container_running(container_id):
 
 
 def stop_container(container_id):
-    print(f"STOPPING Container {container_id}.")
-    # Stop a Docker container
     try:
         container = get_docker_client().containers.get(container_id)
         container.stop()
@@ -142,7 +137,7 @@ def stop_container(container_id):
         print(f"Error Stopping container: {container_id}")
         return
 
-    print(f"Container {container_id} stopped.")
+    print(f"Stopped container {container_id} successfully.")
 
     status = 0  # STOPPED
     update_container_state(container_id, status)
