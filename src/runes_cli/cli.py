@@ -24,6 +24,25 @@ from .persistence import (
 from .api import get_remote_images, get_remote_sources
 from .builder import DockerImageBuilder
 
+# default
+default_title = "Welcome to Signals & Sorcery!"
+
+# options
+option_menu = "menu"
+
+# source options
+option_source_build = "build (remotes from source code)"
+option_source_list = "list (remote source code)"
+
+# remote options
+option_remote_running = "running (active remotes)"
+option_remote_available = "available (to run remotes)"
+
+# docker options
+option_docker_run_cpu = "run (a cpu docker-image as a dawnet remote)"
+option_docker_run_gpu = "run (a gpu docker-image as a dawnet remote)"
+option_docker_publish = "publish (a docker-image as a dawnet remote)"
+
 
 def clear_screen():
     if platform.system() == "Windows":
@@ -40,7 +59,7 @@ def cli(ctx):
 
 
 def menu(ctx):
-    option_title = "Welcome to DAWnet!"
+    option_title = default_title
     option_tokens = "tokens (connect your remotes)"
     option_remotes = "remotes (ready to run)"
     option_sources = "sources (ready to build)"
@@ -102,23 +121,6 @@ def tokens_menu(ctx):
     menu(ctx)
 
 
-# options
-option_menu = "menu"
-
-# source options
-option_source_build = "build (remotes from source code)"
-option_source_list = "list (remote source code)"
-
-# remote options
-option_remote_running = "running (active remotes)"
-option_remote_available = "available (to run remotes)"
-
-# docker options
-option_docker_run_cpu = "run (a cpu docker-image as a dawnet remote)"
-option_docker_run_gpu = "run (a gpu docker-image as a dawnet remote)"
-option_docker_publish = "publish (a docker-image as a dawnet remote)"
-
-
 def is_valid_docker_image_name(name):
     """
     Check if the given name is a valid Docker image name.
@@ -151,7 +153,7 @@ def validate_notebook_source(source):
 
 
 def source_menu(ctx):
-    title = "Welcome to DAWnet! (Source Code)"
+    title = default_title
 
     token_actions = [option_source_build, option_source_list, option_menu]
     selected_action = select(
@@ -415,7 +417,7 @@ def manage_remote(ctx, selected_remote, selected_category):
     # elif selected_action == 'install':
     #     print("INSTALLL BITCH")
     #     formatted_name = format_image_name(selected_remote.remote_name)
-    #     img_name = build_image(formatted_name, '/home/stevehiehn/dawnet/dawnet_cli/docker_image')
+    #     img_name = build_image(formatted_name, '/home/stevehiehn/dawnet/runes_cli/docker_image')
     #     print(f"Image build success! Name={img_name}")
     else:
         print(

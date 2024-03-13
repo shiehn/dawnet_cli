@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="dawnet-cli",
+    name="runes-cli",
     version="0.0.1",
     author="Steve Hiehn",
     author_email="stevehiehn@gmail.com",
@@ -19,11 +19,11 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "dawnet=dawnet_cli.cli:main",
+            "runes=runes_cli.cli:main",
         ],
     },
     # Other metadata
-    description="A python CLI used to manage DAWnet remotes",
+    description="A python CLI used to manage the Signals & Sorcery platform",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     license="GPL-3.0",

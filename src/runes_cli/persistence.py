@@ -7,8 +7,8 @@ from .models import RemoteContainer
 
 # Database setup
 # Name of your application
-appname = "dawnet_cli"
-appauthor = "dawnet"
+appname = "runes_cli"
+appauthor = "Steve Hiehn"
 
 # Determine platform-specific user data directory
 data_dir = user_data_dir(appname, appauthor)
@@ -17,7 +17,7 @@ data_dir = user_data_dir(appname, appauthor)
 os.makedirs(data_dir, exist_ok=True)
 
 # Path to the SQLite database within the data directory
-db_path = os.path.join(data_dir, "dawnet_cli.db")
+db_path = os.path.join(data_dir, "runes_cli.db")
 
 
 # Connect to the SQLite database
