@@ -31,17 +31,17 @@ default_title = "Welcome to Signals & Sorcery!"
 option_menu = "menu"
 
 # source options
-option_source_build = "build (remotes from source code)"
+option_source_build = "build (elixirs from source code)"
 option_source_list = "list (remote source code)"
 
 # remote options
-option_remote_running = "running (active remotes)"
-option_remote_available = "available (to run remotes)"
+option_remote_running = "running (active elixirs)"
+option_remote_available = "available (to run elixirs)"
 
 # docker options
-option_docker_run_cpu = "run (a cpu docker-image as a dawnet remote)"
-option_docker_run_gpu = "run (a gpu docker-image as a dawnet remote)"
-option_docker_publish = "publish (a docker-image as a dawnet remote)"
+option_docker_run_cpu = "run (a cpu docker-image as an elixir)"
+option_docker_run_gpu = "run (a gpu docker-image as an elixir)"
+option_docker_publish = "publish (a docker-image as an elixir)"
 
 
 def clear_screen():
@@ -60,9 +60,9 @@ def cli(ctx):
 
 def menu(ctx):
     option_title = default_title
-    option_tokens = "tokens (connect your remotes)"
-    option_remotes = "remotes (ready to run)"
-    option_sources = "sources (ready to build)"
+    option_tokens = "tokens (connect your elixirs)"
+    option_remotes = "elixirs (ready to run)"
+    option_sources = "elixir source (ready to build)"
     option_docker = "docker-images (publish or run)"
 
     entry_options = [option_tokens, option_remotes, option_sources, option_docker]
