@@ -32,7 +32,7 @@ option_menu = "menu"
 
 # source options
 option_source_build = "build (elixirs from source code)"
-option_source_list = "list (remote source code)"
+option_source_list = "list (elixir source code)"
 
 # remote options
 option_remote_running = "running (active elixirs)"
