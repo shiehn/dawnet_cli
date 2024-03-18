@@ -7,11 +7,13 @@ from .persistence import get_container_states
 
 
 def get_remote_sources() -> []:
+    # remote_name: str, source_url: str, remote_version: str):
 
-    #remote_name: str, source_url: str, remote_version: str):
-
-    db_remote_source = RemoteSource(remote_name='Hello Remote', source_url='https://raw.githubusercontent.com/shiehn/dawnet-remotes/main/DAWNet_Remote_template.ipynb', remote_version='v0')
-
+    db_remote_source = RemoteSource(
+        remote_name="Hello Remote",
+        source_url="https://raw.githubusercontent.com/shiehn/dawnet-remotes/main/DAWNet_Remote_template.ipynb",
+        remote_version="v0",
+    )
 
     #
     # pids = list_pids(status=None)
@@ -26,7 +28,6 @@ def get_remote_sources() -> []:
     #     'Demucs - stem splitting',
     #     'BeatNet - bpm detection',
     # ]
-
 
 
 # http://localhost:8081/api/hub/remote-images/
@@ -44,8 +45,9 @@ def get_remote_sources() -> []:
 #     }
 # ]
 
+
 def get_remote_images() -> []:
-    base_url = os.getenv("DN_CLI_API", "http://34.135.228.111:8081")
+    base_url = os.getenv("DN_CLI_API", "https://signalsandsorceryapi.com")
     response = requests.get(f"{base_url}/api/hub/remote-images/")
     remote_images_data = response.json()
 
@@ -54,7 +56,7 @@ def get_remote_images() -> []:
             remote_name=item["remote_name"],
             remote_description=item["remote_description"],
             image_name=item["image_name"],
-            remote_version=item["remote_version"]
+            remote_version=item["remote_version"],
         )
         for item in remote_images_data
     ]
@@ -66,7 +68,7 @@ def get_remote_images() -> []:
 
 
 def get_remote_sources() -> []:
-    base_url = os.getenv("DN_CLI_API", "http://34.135.228.111:8081")
+    base_url = os.getenv("DN_CLI_API", "https://signalsandsorceryapi.com")
     response = requests.get(f"{base_url}/api/hub/remote-sources/")
     remote_images_data = response.json()
 
@@ -75,7 +77,7 @@ def get_remote_sources() -> []:
             remote_name=item["remote_name"],
             remote_description=item["remote_description"],
             source_url=item["source_url"],
-            remote_version=item["remote_version"]
+            remote_version=item["remote_version"],
         )
         for item in remote_images_data
     ]
@@ -90,10 +92,10 @@ def pull_remote_source():
     import requests
 
     # URL of the raw content
-    file_url = 'https://raw.githubusercontent.com/shiehn/dawnet-remotes/main/DAWNet_Remote_template.ipynb'
+    file_url = "https://raw.githubusercontent.com/shiehn/dawnet-remotes/main/DAWNet_Remote_template.ipynb"
 
     # The local path where you want to save the file
-    file_name = 'DAWNet_Remote_template.ipynb'
+    file_name = "DAWNet_Remote_template.ipynb"
 
     # Send a GET request to the file URL
     response = requests.get(file_url)
@@ -101,8 +103,8 @@ def pull_remote_source():
     # Check if the request was successful
     if response.status_code == 200:
         # Open file in binary write mode and save the content to the local file
-        with open(file_name, 'wb') as file:
+        with open(file_name, "wb") as file:
             file.write(response.content)
         print(f'File "{file_name}" has been downloaded successfully.')
     else:
-        print(f'Failed to download the file. Status code: {response.status_code}')
+        print(f"Failed to download the file. Status code: {response.status_code}")
