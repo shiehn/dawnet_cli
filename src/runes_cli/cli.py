@@ -382,7 +382,7 @@ def list_docker_images(ctx, selected_action):
                     clear_screen()
                     print("Image published to DockerHub successfully.")
                     # Gather missing information
-                    image_info = gather_image_info(image_name)
+                    image_info = gather_image_info(selected_docker_image.remote_name)
 
                     if insert_remote_image_info(image_info):
                         print("Image information successfully registered.")
