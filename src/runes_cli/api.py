@@ -1,9 +1,9 @@
 import os
-import time
 import requests
 
-from .models import RemoteContainer, RemoteImage, RemoteSource
-from .persistence import get_container_states
+from .models import RemoteImage, RemoteSource
+
+base_url = os.getenv("DN_CLI_API", "https://signalsandsorceryapi.com")
 
 
 def get_remote_sources() -> []:
@@ -30,6 +30,20 @@ def get_remote_sources() -> []:
     # ]
 
 
+def insert_remote_image_info(image_info):
+    route = "/api/hub/remote-images/"
+    base_url = os.getenv("DN_CLI_API", "https://signalsandsorceryapi.com")
+    endpoint_url = f"{base_url}{route}"
+    try:
+        response = requests.post(endpoint_url, json=image_info)
+        response.raise_for_status()  # This will raise an exception for HTTP errors
+        print("Image information successfully registered.")
+        return True
+    except requests.RequestException as e:
+        print(f"Failed to register image information: {e}")
+        return False
+
+
 # http://localhost:8081/api/hub/remote-images/
 # [
 #     {
@@ -47,7 +61,6 @@ def get_remote_sources() -> []:
 
 
 def get_remote_images() -> []:
-    base_url = os.getenv("DN_CLI_API", "https://signalsandsorceryapi.com")
     response = requests.get(f"{base_url}/api/hub/remote-images/")
     remote_images_data = response.json()
 
@@ -68,7 +81,6 @@ def get_remote_images() -> []:
 
 
 def get_remote_sources() -> []:
-    base_url = os.getenv("DN_CLI_API", "https://signalsandsorceryapi.com")
     response = requests.get(f"{base_url}/api/hub/remote-sources/")
     remote_images_data = response.json()
 
@@ -89,8 +101,6 @@ def get_remote_sources() -> []:
 
 
 def pull_remote_source():
-    import requests
-
     # URL of the raw content
     file_url = "https://raw.githubusercontent.com/shiehn/dawnet-remotes/main/DAWNet_Remote_template.ipynb"
 

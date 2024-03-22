@@ -1,6 +1,7 @@
 import sys
 import click
 import docker
+from click import prompt
 from questionary import select
 import os
 import re
@@ -19,9 +20,9 @@ from .persistence import (
     set_or_update_token,
     generate_uuid,
     read_token_from_db,
-    get_container_states,
+    get_container_states, get_docker_credentials, save_docker_credentials,
 )
-from .api import get_remote_images, get_remote_sources
+from .api import get_remote_images, get_remote_sources, insert_remote_image_info
 from .builder import DockerImageBuilder
 
 # default
@@ -152,6 +153,19 @@ def validate_notebook_source(source):
             return False
 
 
+def get_valid_docker_image_name():
+    while True:
+        image_name = click.prompt("Enter the Docker image name", type=str)
+        if is_valid_docker_image_name(image_name):
+            try:
+                validate_docker_image_name(image_name)
+                return image_name
+            except Exception as e:
+                click.echo(f"Invalid image name: {e}")
+        else:
+            click.echo("The provided image name is not valid. Please try again.")
+
+
 def source_menu(ctx):
     title = default_title
 
@@ -165,17 +179,25 @@ def source_menu(ctx):
 
     if selected_action == option_source_build:
         source_url = click.prompt(
-            "Enter a url or path to a `.ipynb` file to build", type=str
+            "Enter a URL or path to a `.ipynb` file to build", type=str
         )
-        image_name = get_valid_docker_image_name()
 
-        # BUILD THE IMAGE
+        # Check if the source URL is valid
         try:
-            builder = DockerImageBuilder()
-            builder.build_docker_image(source_url, image_name)
+            validate_notebook_source(source_url)
+            image_name = get_valid_docker_image_name()
+
+            # BUILD THE IMAGE
+            try:
+                builder = DockerImageBuilder()
+                builder.build_docker_image(source_url, image_name)
+            except Exception as e:
+                click.echo(f"Error building the docker image: {e}")
         except Exception as e:
-            click.echo(f"Error building the docker image: {e}")
-            menu(ctx)
+            click.echo(f"Invalid source URL: {e}")
+
+        menu(ctx)
+
     elif selected_action == option_source_list:
         remotes = get_remote_sources()
 
@@ -188,15 +210,13 @@ def source_menu(ctx):
             )
         )
 
-        # remotes.append(RemoteContainer(0, 0, 0, "menu", ""))
-
         selected_source = select(
             "Build an image from source code:",
             choices=[
                 {"name": "menu", "value": container}
                 if container.remote_name == "menu"
                 else {
-                    "name": f"{container.remote_name} - {container.source_url}",
+                    "name": f"{container.remote_name} - {container.source_url} [{container.remote_version}]",
                     "value": container,
                 }
                 for container in remotes
@@ -207,16 +227,22 @@ def source_menu(ctx):
             clear_screen()
             menu(ctx)
 
-        image_name = click.prompt("Name the docker image you are building", type=str)
-
-        # BUILD THE IMAGE
+        # Check if the source URL is valid
         try:
-            builder = DockerImageBuilder()
-            builder.build_docker_image(selected_source.source_url, image_name)
-            click.echo(f"Image build success! Image Name = {image_name}")
+            validate_notebook_source(selected_source.source_url)
+            image_name = get_valid_docker_image_name()
+
+            # BUILD THE IMAGE
+            try:
+                builder = DockerImageBuilder()
+                builder.build_docker_image(selected_source.source_url, image_name)
+                click.echo(f"Image build success! Image Name = {image_name}")
+            except Exception as e:
+                click.echo(f"Error building the docker image: {e}")
         except Exception as e:
-            click.echo(f"Error building the docker image: {e}")
-            menu(ctx)
+            click.echo(f"Invalid source URL: {e}")
+
+        menu(ctx)
 
     else:
         menu(ctx)
@@ -251,18 +277,60 @@ def docker_menu(ctx):
 
     clear_screen()
 
+    print("selected_category" + selected_category)
+
     if selected_category == option_menu:
         menu(ctx)
     else:
         list_docker_images(ctx, selected_category)
 
 
+def gather_image_info(image_name):
+    """
+    Prompts the user for missing image information and returns a dictionary with all data.
+    """
+    questions = [
+        {
+            'type': 'input',
+            'name': 'remote_name',
+            'message': 'Enter the remote name:',
+        },
+        {
+            'type': 'input',
+            'name': 'remote_description',
+            'message': 'Enter the remote description:',
+        },
+        {
+            'type': 'input',
+            'name': 'remote_category',
+            'message': 'Enter the remote category:',
+        },
+        {
+            'type': 'input',
+            'name': 'remote_author',
+            'message': 'Enter the remote author:',
+        },
+        {
+            'type': 'input',
+            'name': 'remote_version',
+            'message': 'Enter the remote version (default "v0"):',
+            'default': 'v0'
+        }
+    ]
+
+    answers = prompt(questions)
+    answers['image_name'] = image_name  # Assuming image_name is always provided
+
+    return answers
+
+
 def list_docker_images(ctx, selected_action):
     remotes = []
 
     if (
-        selected_action == option_docker_run_cpu
-        or selected_action == option_docker_run_gpu
+            selected_action == option_docker_run_cpu
+            or selected_action == option_docker_run_gpu
+            or selected_action == option_docker_publish
     ):
         client = docker.from_env()
         images = client.images.list()
@@ -274,8 +342,10 @@ def list_docker_images(ctx, selected_action):
         # Append 'menu' option to the remotes list
         remotes.append(RemoteContainer(0, 0, 0, "menu", ""))
 
+        question = "Select a local docker image to publish to the Elixir Vault" if selected_action == option_docker_publish else "Select a local docker image to run as an Elixir"
+
         selected_docker_image = select(
-            "Select a local docker image to run as a remote",
+            question,
             choices=[
                 {"name": option_menu, "value": container}
                 if container.remote_name == option_menu
@@ -291,7 +361,10 @@ def list_docker_images(ctx, selected_action):
 
         if selected_docker_image.remote_name == option_menu:
             menu(ctx)
-        else:
+            return
+
+        if selected_action == option_docker_run_cpu or selected_action == option_docker_run_gpu:
+
             use_gpu = True if selected_action == option_docker_run_gpu else False
 
             start_container(
@@ -303,12 +376,28 @@ def list_docker_images(ctx, selected_action):
             )
 
             menu(ctx)
+        elif selected_action == option_docker_publish:
+            if check_and_login_to_docker():
+                if publish_docker_image(selected_docker_image.remote_name, "latest"):
+                    clear_screen()
+                    print("Image published to DockerHub successfully.")
+                    # Gather missing information
+                    image_info = gather_image_info(image_name)
 
-    elif selected_action == option_docker_publish:
-        click.echo("PUBLISH is currently in development. Check back soon.")
-        menu(ctx)
-    else:
-        menu(ctx)
+                    if insert_remote_image_info(image_info):
+                        print("Image information successfully registered.")
+                    else:
+                        print("Failed to register image information.")
+
+                    return
+                else:
+                    print("Docker image publish failed.")
+                return
+            else:
+                print("DID NOT SUCCESSFULLY LOGIN TO DOCKER HUB")
+                return
+
+    menu(ctx)
 
 
 def list_remotes(ctx, selected_category):
@@ -368,6 +457,94 @@ def list_remotes(ctx, selected_category):
             menu(ctx)
         else:
             manage_remote(ctx, selected_remote, selected_category)
+
+
+import docker
+import getpass
+
+
+def login_to_docker_hub(username, password):
+    client = docker.from_env()
+    try:
+        login_response = client.login(username=username, password=password, registry="https://index.docker.io/v1/")
+        if login_response.get("Status") == "Login Succeeded":
+            print("Logged in to Docker Hub successfully.")
+            return True
+        else:
+            print("Failed to log in to Docker Hub.")
+            return False
+    except docker.errors.APIError as e:
+        print(f"An error occurred while trying to log in to Docker Hub: {e}")
+        return False
+
+
+def check_and_login_to_docker():
+    username, password = get_docker_credentials()
+    if username and password:
+        if login_to_docker_hub(username, password):
+            print("Logged in using cached credentials.")
+            return True
+        else:
+            print(f"Failed to log in using cached credentials.{username} {password}")
+            return False
+    # If no credentials were found or login failed, prompt the user
+    username = input("Enter your Docker Hub username: ")
+    password = getpass.getpass("Enter your Docker Hub password: ")
+    if login_to_docker_hub(username, password):
+        # Cache the credentials upon successful login
+        save_docker_credentials(username, password)
+        return True
+
+    return False
+
+
+def publish_docker_image(image_name, tag):
+    if not check_and_login_to_docker():
+        print("Cannot publish the image without logging in.")
+        return False
+
+    username, _ = get_docker_credentials()
+
+    client = docker.from_env()
+    repository_name = f"{username}/{image_name}"  # Use the Docker Hub username
+
+    try:
+        # Tag the image for the repository
+        image = client.images.get(image_name)
+        image.tag(repository_name, tag=tag)
+
+        # Initialize a variable to track push success
+        push_success = False
+
+        # Push the image
+        for line in client.images.push(repository_name, tag=tag, stream=True, decode=True):
+            # Print detailed message if available
+            if 'status' in line:
+                print(line['status'], end='')
+                if 'progress' in line:
+                    print(' ' + line['progress'], end='')
+                print()  # Newline for next status
+                if line.get('status') == 'Pushed':
+                    push_success = True  # Mark success when a layer is pushed
+            elif 'error' in line:
+                print(f"Error: {line['error']}")
+                return False  # Return False immediately on error
+            else:
+                print(line)  # Print the raw line if unexpected format
+
+        # The operation can be considered successful if we've seen at least one 'Pushed' status without errors
+        if push_success:
+            return True
+        else:
+            print("Image push did not complete successfully.")
+            return False
+    except Exception as e:
+        print(f"An error occurred while trying to publish the Docker image: {e}")
+        return False
+
+
+# Example usage
+# publish_docker_image('my_image', 'latest')
 
 
 def manage_remote(ctx, selected_remote, selected_category):
