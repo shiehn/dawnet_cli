@@ -1,5 +1,5 @@
 # Signals And Sorcery CLI
-A python CLI used to setup &amp; manage [DAWnet](https://dawnet.tools/) remote scripts on MAC, LINUX and Servers
+A python CLI used to setup &amp; manage [Crucible Plugins](https://dawnet.tools/) remote scripts on MAC, LINUX and Servers
 
 ### Requirements:
 
