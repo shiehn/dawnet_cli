@@ -5,6 +5,8 @@ from .persistence import save_container_state, update_container_state
 import warnings
 import subprocess
 import json
+import os
+import base64
 
 
 def check_nvidia_docker_installed():
@@ -31,6 +33,39 @@ def check_nvidia_docker_installed():
     except Exception as e:
         print(f"Exception occurred: {e}")
         return False
+
+
+def get_docker_namespace(username_provided):
+    docker_config_path = os.path.expanduser("~/.docker/config.json")
+    config_username = None  # Default to None if not found
+
+    try:
+        # Attempt to read the Docker config file
+        if os.path.exists(docker_config_path):
+            with open(docker_config_path, 'r') as config_file:
+                config = json.load(config_file)
+
+            auths = config.get('auths', {})
+            docker_hub_auth = auths.get("https://index.docker.io/v1/", {})
+            auth_base64 = docker_hub_auth.get('auth')
+
+            if auth_base64:
+                # Decode the auth token to get "username:password"
+                auth_decoded = base64.b64decode(auth_base64).decode('utf-8')
+                config_username, _ = auth_decoded.split(':', 1)  # Extract username
+
+        # Determine which username to use based on the conditions provided
+        if config_username is None or config_username == username_provided:
+            return username_provided  # Use the provided username
+        else:
+            print(
+                f"Config username ({config_username}) does not match the provided username ({username_provided}). Using config username.")
+            return config_username  # Use the username from the config
+
+    except Exception as e:
+        print(f"An error occurred while trying to read the Docker config file: {e}")
+        # Default to using the provided username if any error occurs
+        return username_provided
 
 
 def format_image_name(input_str: str) -> str:
@@ -82,13 +117,13 @@ def docker_check():
 
 
 def start_container(
-    image_name: str,
-    remote_name: str,
-    remote_description: str,
-    token: str,
-    gpu: bool = False,
-    command=None,
-    name=None,
+        image_name: str,
+        remote_name: str,
+        remote_description: str,
+        token: str,
+        gpu: bool = False,
+        command=None,
+        name=None,
 ) -> Container:
     # Check for GPU support if required
     if gpu and not check_nvidia_docker_installed():

@@ -37,7 +37,6 @@ def insert_remote_image_info(image_info):
     try:
         response = requests.post(endpoint_url, json=image_info)
         response.raise_for_status()  # This will raise an exception for HTTP errors
-        print("Image information successfully registered.")
         return True
     except requests.RequestException as e:
         print(f"Failed to register image information: {e}")
