@@ -30,6 +30,57 @@ def get_remote_sources() -> []:
     # ]
 
 
+def publish_remote_source(
+    remote_name,
+    remote_description,
+    remote_category,
+    remote_author,
+    source_url,
+    colab_url=None,
+    remote_version=None,
+):
+    """
+    Publish a new remote source by making a POST request to the /remote-sources/ endpoint.
+
+    Parameters:
+    - base_url (str): The base URL where the /remote-sources/ endpoint is located.
+    - remote_name (str): The name of the remote source.
+    - remote_description (str): A description of the remote source.
+    - remote_category (str): The category of the remote source.
+    - remote_author (str): The author of the remote source.
+    - source_url (str): The URL to the source.
+    - colab_url (str, optional): The URL to a Colab, if applicable.
+    - remote_version (str, optional): The version of the remote source, if applicable.
+
+    Returns:
+    A requests.Response object containing the server's response to the HTTP request.
+    """
+
+    # Endpoint for the POST request
+    base_url = os.getenv("DN_CLI_API", "https://signalsandsorceryapi.com")
+    endpoint = f"{base_url}/api/hub/remote-sources/"
+
+    # Construct the JSON body of the request
+    data = {
+        "remote_name": remote_name,
+        "remote_description": remote_description,
+        "remote_category": remote_category,
+        "remote_author": remote_author,
+        "source_url": source_url,
+        "colab_url": colab_url,
+        "remote_version": remote_version,
+    }
+
+    # Remove keys with None values
+    data = {k: v for k, v in data.items() if v is not None}
+
+    # Make the POST request
+    response = requests.post(endpoint, json=data)
+
+    # Return the response object
+    return response
+
+
 def insert_remote_image_info(image_info):
     route = "/api/hub/remote-images/"
     base_url = os.getenv("DN_CLI_API", "https://signalsandsorceryapi.com")

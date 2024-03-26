@@ -1,6 +1,9 @@
+import asyncio
 import sys
 import click
 import docker
+import requests
+import questionary
 from questionary import select, prompt
 import os
 import re
@@ -8,6 +11,8 @@ import platform
 from urllib.parse import urlparse
 import docker
 import getpass
+
+from .file_uploader import FileUploader
 
 from .models import RemoteContainer, RemoteSource
 from .containers import (
@@ -26,7 +31,12 @@ from .persistence import (
     get_docker_credentials,
     save_docker_credentials,
 )
-from .api import get_remote_images, get_remote_sources, insert_remote_image_info
+from .api import (
+    get_remote_images,
+    get_remote_sources,
+    insert_remote_image_info,
+    publish_remote_source,
+)
 from .builder import DockerImageBuilder
 
 # default
@@ -38,6 +48,7 @@ option_menu = "menu"
 # source options
 option_source_build = "build (elixirs from source code)"
 option_source_list = "list (elixir source code)"
+option_publish = "publish (elixir source code to the vault)"
 
 # remote options
 option_remote_running = "running (active elixirs)"
@@ -170,10 +181,91 @@ def get_valid_docker_image_name():
             click.echo("The provided image name is not valid. Please try again.")
 
 
+def publish_elixir_source(ctx):
+    """
+    CLI tool to collect information and publish an Elixir source.
+    """
+
+    uploader = FileUploader()
+    # uploader.upload(source_url)
+
+    input_source = questionary.text(
+        "Enter a local path to an `.ipynb` file or a url to a public Google CoLab:",
+        validate=lambda text: 1 <= len(text) <= 1500,
+    ).ask()
+
+    if input_source.endswith(".ipynb") and os.path.isfile(input_source):
+        # do the file upload stuff and get the source_url from the file uploader
+        source_url = asyncio.run(uploader.upload(input_source))
+        colab_url = None
+    elif urlparse(input_source).scheme in ["http", "https"]:
+        source_url = None
+        colab_url = input_source
+    else:
+        click.echo("Invalid Input")
+        menu(ctx)
+
+    # Collecting information using questionary
+    remote_name = questionary.text(
+        "Elixir name (maxLength: 100):",
+        validate=lambda text: 1 <= len(text) <= 100,
+    ).ask()
+    remote_description = questionary.text(
+        "Elixir description (maxLength: 250):",
+        validate=lambda text: 1 <= len(text) <= 250,
+    ).ask()
+    remote_category = questionary.text(
+        "Elixir category (maxLength: 100):",
+        validate=lambda text: 1 <= len(text) <= 100,
+    ).ask()
+    remote_author = questionary.text(
+        "Authors Name (maxLength: 100):",
+        validate=lambda text: 1 <= len(text) <= 100,
+    ).ask()
+    remote_version = questionary.text(
+        "Enter remote version (optional, maxLength: 25):",
+        validate=lambda text: len(text) <= 25,
+    ).ask()
+
+    # Constructing the data dictionary
+    data = {
+        "remote_name": remote_name,
+        "remote_description": remote_description,
+        "remote_category": remote_category,
+        "remote_author": remote_author,
+        "source_url": source_url,
+        "colab_url": colab_url if colab_url else None,
+        "remote_version": remote_version if remote_version else None,
+    }
+
+    response = publish_remote_source(
+        remote_name,
+        remote_description,
+        remote_category,
+        remote_author,
+        source_url,
+        colab_url,
+        remote_version,
+    )
+
+    # Handling the response
+    if response.status_code == 200 or response.status_code == 201:
+        click.echo("Elixir source published successfully.")
+    else:
+        click.echo(
+            f"Failed to publish Elixir source. Status code: {response.status_code}"
+        )
+
+
 def source_menu(ctx):
     title = default_title
 
-    token_actions = [option_source_build, option_source_list, option_menu]
+    token_actions = [
+        option_source_build,
+        option_source_list,
+        option_publish,
+        option_menu,
+    ]
     selected_action = select(
         title,
         choices=token_actions,
@@ -200,6 +292,10 @@ def source_menu(ctx):
         except Exception as e:
             click.echo(f"Invalid source URL: {e}")
 
+        menu(ctx)
+    elif selected_action == option_publish:
+
+        publish_elixir_source(ctx)
         menu(ctx)
 
     elif selected_action == option_source_list:
