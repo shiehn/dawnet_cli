@@ -1,6 +1,14 @@
 class RemoteContainer:
-    def __init__(self, id: int = 0, pid: int = 0, container_id: str = '', remote_name: str = '',
-                 remote_description: str = '', associated_token: str = None, status: int = 0, ):
+    def __init__(
+        self,
+        id: int = 0,
+        pid: int = 0,
+        container_id: str = "",
+        remote_name: str = "",
+        remote_description: str = "",
+        associated_token: str = None,
+        status: int = 0,
+    ):
         self.id = id
         self.pid = pid
         self.container_id = container_id
@@ -14,7 +22,13 @@ class RemoteContainer:
 
 
 class RemoteImage:
-    def __init__(self, remote_name: str, remote_description: str, image_name: str, remote_version: str):
+    def __init__(
+        self,
+        remote_name: str,
+        remote_description: str,
+        image_name: str,
+        remote_version: str,
+    ):
         self.remote_name = remote_name
         self.remote_description = remote_description
         self.image_name = image_name
@@ -22,7 +36,15 @@ class RemoteImage:
 
 
 class RemoteSource:
-    def __init__(self, remote_name: str, remote_description: str, source_url: str, remote_version: str):
+    def __init__(
+        self,
+        remote_name: str,
+        remote_description: str,
+        source_url: str,
+        remote_version: str,
+        id: str = None,
+    ):
+        self.id = id
         self.remote_name = remote_name
         self.remote_description = remote_description
         self.source_url = source_url

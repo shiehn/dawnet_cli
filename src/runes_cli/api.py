@@ -108,9 +108,24 @@ def insert_remote_image_info(image_info):
 #         "updated_at": "2024-03-06T06:13:38"
 #     }
 # ]
+def delete_remote_image(remote_image_id):
+    base_url = os.getenv("DN_CLI_API", "https://signalsandsorceryapi.com")
+    delete_url = f"{base_url}/hub/remote-images/{remote_image_id}/"
+
+    # Perform the DELETE request
+    response = requests.delete(delete_url)
+
+    # Checking the response
+    if response.status_code == 204:
+        print("RemoteImage deleted successfully.")
+    else:
+        print(
+            f"Failed to delete RemoteImage. Status code: {response.status_code}, Detail: {response.text}"
+        )
 
 
 def get_remote_images() -> []:
+    base_url = os.getenv("DN_CLI_API", "https://signalsandsorceryapi.com")
     response = requests.get(f"{base_url}/api/hub/remote-images/")
     remote_images_data = response.json()
 
@@ -130,6 +145,22 @@ def get_remote_images() -> []:
     return remote_images
 
 
+def delete_remote_source(remote_source_id):
+    base_url = os.getenv("DN_CLI_API", "https://signalsandsorceryapi.com")
+    delete_url = f"{base_url}/hub/remote-sources/{remote_source_id}/"
+
+    # Perform the DELETE request
+    response = requests.delete(delete_url)
+
+    # Checking the response
+    if response.status_code == 204:
+        print("RemoteSource deleted successfully.")
+    else:
+        print(
+            f"Failed to delete RemoteSource. Status code: {response.status_code}, Detail: {response.text}"
+        )
+
+
 def get_remote_sources() -> []:
     response = requests.get(f"{base_url}/api/hub/remote-sources/")
     remote_images_data = response.json()
@@ -140,6 +171,7 @@ def get_remote_sources() -> []:
             remote_description=item["remote_description"],
             source_url=item["source_url"],
             remote_version=item["remote_version"],
+            id=item["id"],
         )
         for item in remote_images_data
     ]
@@ -148,23 +180,3 @@ def get_remote_sources() -> []:
     # print(f"Remote Images: {remote_sources}")
 
     return remote_sources
-
-
-def pull_remote_source():
-    # URL of the raw content
-    file_url = "https://raw.githubusercontent.com/shiehn/dawnet-remotes/main/DAWNet_Remote_template.ipynb"
-
-    # The local path where you want to save the file
-    file_name = "DAWNet_Remote_template.ipynb"
-
-    # Send a GET request to the file URL
-    response = requests.get(file_url)
-
-    # Check if the request was successful
-    if response.status_code == 200:
-        # Open file in binary write mode and save the content to the local file
-        with open(file_name, "wb") as file:
-            file.write(response.content)
-        print(f'File "{file_name}" has been downloaded successfully.')
-    else:
-        print(f"Failed to download the file. Status code: {response.status_code}")

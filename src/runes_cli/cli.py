@@ -36,6 +36,7 @@ from .api import (
     get_remote_sources,
     insert_remote_image_info,
     publish_remote_source,
+    delete_remote_source,
 )
 from .builder import DockerImageBuilder
 
@@ -48,7 +49,8 @@ option_menu = "menu"
 # source options
 option_source_build = "build (elixirs from source code)"
 option_source_list = "list (elixir source code)"
-option_publish = "publish (elixir source code to the vault)"
+option_publish = "publish (elixir source code)"
+option_delete = "delete (elixir source code)"
 
 # remote options
 option_remote_running = "running (active elixirs)"
@@ -264,6 +266,7 @@ def source_menu(ctx):
         option_source_build,
         option_source_list,
         option_publish,
+        option_delete,
         option_menu,
     ]
     selected_action = select(
@@ -298,6 +301,40 @@ def source_menu(ctx):
         publish_elixir_source(ctx)
         menu(ctx)
 
+    elif selected_action == option_delete:
+        remotes = get_remote_sources()
+
+        remotes.append(
+            RemoteSource(
+                remote_name=option_menu,
+                remote_description="",
+                source_url="",
+                remote_version="",
+            )
+        )
+
+        selected_source = select(
+            "Build an image from source code:",
+            choices=[
+                (
+                    {"name": "menu", "value": container}
+                    if container.remote_name == "menu"
+                    else {
+                        "name": f"{container.remote_name} - {container.source_url} [{container.remote_version}]",
+                        "value": container,
+                    }
+                )
+                for container in remotes
+            ],
+        ).ask()
+
+        if selected_source.remote_name == "menu":
+            clear_screen()
+            menu(ctx)
+        else:
+            delete_remote_source(selected_source.id)
+            menu(ctx)
+
     elif selected_action == option_source_list:
         remotes = get_remote_sources()
 
@@ -328,22 +365,6 @@ def source_menu(ctx):
         if selected_source.remote_name == "menu":
             clear_screen()
             menu(ctx)
-
-        # Check if the source URL is valid
-        try:
-            validate_notebook_source(selected_source.source_url)
-            image_name = get_valid_docker_image_name()
-
-            # BUILD THE IMAGE
-            try:
-                builder = DockerImageBuilder()
-                builder.build_docker_image(selected_source.source_url, image_name)
-                clear_screen()
-                click.echo(f"Image build success! Image Name = {image_name}")
-            except Exception as e:
-                click.echo(f"Error building the docker image: {e}")
-        except Exception as e:
-            click.echo(f"Invalid source URL: {e}")
 
         menu(ctx)
 
