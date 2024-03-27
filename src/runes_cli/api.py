@@ -118,20 +118,26 @@ def insert_remote_image_info(image_info):
 #         "updated_at": "2024-03-06T06:13:38"
 #     }
 # ]
-def delete_remote_image(remote_image_id):
+def delete_elixir(remote_image_id):
     base_url = os.getenv("DN_CLI_API", "https://signalsandsorceryapi.com")
-    delete_url = f"{base_url}:{api_port}/hub/remote-images/{remote_image_id}/"
+    delete_url = f"{base_url}:{api_port}/api/hub/remote-images/{remote_image_id}/"
 
-    # Perform the DELETE request
-    response = requests.delete(delete_url)
+    access_token = get_access_token()
+
+    print("access_token: ", access_token)
+
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+    }
+
+    response = requests.delete(delete_url, headers=headers)
 
     # Checking the response
     if response.status_code == 204:
         print("RemoteImage deleted successfully.")
     else:
-        print(
-            f"Failed to delete RemoteImage. Status code: {response.status_code}, Detail: {response.text}"
-        )
+        print(f"Failed to delete RemoteImage. Status code: {response.status_code}")
 
 
 def get_remote_images() -> []:
@@ -145,6 +151,7 @@ def get_remote_images() -> []:
             remote_description=item["remote_description"],
             image_name=item["image_name"],
             remote_version=item["remote_version"],
+            id=item["id"],
         )
         for item in remote_images_data
     ]
@@ -157,10 +164,16 @@ def get_remote_images() -> []:
 
 def delete_remote_source(remote_source_id):
     base_url = os.getenv("DN_CLI_API", "https://signalsandsorceryapi.com")
-    delete_url = f"{base_url}:{api_port}/hub/remote-sources/{remote_source_id}/"
+    delete_url = f"{base_url}:{api_port}/api/hub/remote-sources/{remote_source_id}/"
 
-    # Perform the DELETE request
-    response = requests.delete(delete_url)
+    access_token = get_access_token()
+
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+    }
+
+    response = requests.delete(delete_url, headers=headers)
 
     # Checking the response
     if response.status_code == 204:

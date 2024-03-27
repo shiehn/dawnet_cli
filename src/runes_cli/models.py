@@ -28,7 +28,9 @@ class RemoteImage:
         remote_description: str,
         image_name: str,
         remote_version: str,
+        id: str = None,
     ):
+        self.id = id
         self.remote_name = remote_name
         self.remote_description = remote_description
         self.image_name = image_name

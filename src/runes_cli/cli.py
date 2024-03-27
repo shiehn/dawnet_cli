@@ -158,6 +158,7 @@ def sign_in(ctx):
         token = response.json().get("access")  # Assuming the token key is 'access'
         if token and verify_access_token(token):
             save_access_token(token)
+            clear_screen()
             click.echo("Successfully signed in.")
             menu(ctx)
         else:
@@ -170,6 +171,7 @@ def sign_out(ctx):
     # Simply remove the token from the database to "sign out"
     delete_access_tokens()
     click.echo("Successfully signed out.")
+    menu(ctx)
 
 
 def account_menu(ctx):
@@ -179,6 +181,7 @@ def account_menu(ctx):
         option_account_sign_in,
         option_account_sign_up,
         option_account_sign_out,
+        option_menu,
     ]
     selected_action = select(
         title,
@@ -193,6 +196,8 @@ def account_menu(ctx):
         sign_up(ctx)
     elif selected_action == option_account_sign_out:
         sign_out(ctx)
+    elif selected_action == option_menu:
+        menu(ctx)
     else:
         menu(ctx)
 
