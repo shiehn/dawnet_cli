@@ -85,7 +85,7 @@ def publish_remote_source(
     }
 
     # Make the POST request
-    response = requests.post(endpoint, json=data)
+    response = requests.post(endpoint, headers=headers, json=data)
 
     # Return the response object
     return response

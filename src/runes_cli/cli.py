@@ -159,6 +159,7 @@ def sign_in(ctx):
         if token and verify_access_token(token):
             save_access_token(token)
             click.echo("Successfully signed in.")
+            menu(ctx)
         else:
             click.echo("Failed to verify the access token.")
     else:
@@ -346,12 +347,14 @@ def publish_elixir_source(ctx):
     # Handling the response
     if response.status_code == 200 or response.status_code == 201:
         click.echo("Elixir source published successfully.")
-    if response.status_code == 401:
+    elif response.status_code == 401:
         click.echo("Unauthorized. Please Sign In, then try again.")
     else:
         click.echo(
             f"Failed to publish Elixir source. Status code: {response.status_code}"
         )
+
+    menu(ctx)
 
 
 def source_menu(ctx):
