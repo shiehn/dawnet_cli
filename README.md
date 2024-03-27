@@ -32,6 +32,12 @@ sudo pip install -U runes-cli
 runes
 ```
 
-**Note:** The CLI will point to the public `Signals & Sorcery` server by default (https://signalsandsorceryapi.com).  If you are running a private server, you will need to set the environment variable `DN_CLI_API` to the URL of your server with the port.
+**Note:** The CLI will point to the public `Signals & Sorcery` server by default (https://signalsandsorceryapi.com).  If you are running a private server, there are three configurable values:
+
+- `DN_CLI_API` - The domain/ip of the server
+- `DN_CLI_API_PORT` - api server port
+- `DN_CLI_AUTH_PORT` - auth server port 
+
+
 
 

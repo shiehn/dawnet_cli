@@ -2,8 +2,11 @@ import os
 import requests
 
 from .models import RemoteImage, RemoteSource
+from .persistence import get_access_token
 
 base_url = os.getenv("DN_CLI_API", "https://signalsandsorceryapi.com")
+auth_port = os.getenv("DN_CLI_AUTH_PORT", "8082")
+api_port = os.getenv("DN_CLI_API_PORT", "8081")
 
 
 def get_remote_sources() -> []:
@@ -58,7 +61,7 @@ def publish_remote_source(
 
     # Endpoint for the POST request
     base_url = os.getenv("DN_CLI_API", "https://signalsandsorceryapi.com")
-    endpoint = f"{base_url}/api/hub/remote-sources/"
+    endpoint = f"{base_url}:{api_port}/api/hub/remote-sources/"
 
     # Construct the JSON body of the request
     data = {
@@ -74,6 +77,13 @@ def publish_remote_source(
     # Remove keys with None values
     data = {k: v for k, v in data.items() if v is not None}
 
+    access_token = get_access_token()
+
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+    }
+
     # Make the POST request
     response = requests.post(endpoint, json=data)
 
@@ -84,7 +94,7 @@ def publish_remote_source(
 def insert_remote_image_info(image_info):
     route = "/api/hub/remote-images/"
     base_url = os.getenv("DN_CLI_API", "https://signalsandsorceryapi.com")
-    endpoint_url = f"{base_url}{route}"
+    endpoint_url = f"{base_url}:{api_port}{route}"
     try:
         response = requests.post(endpoint_url, json=image_info)
         response.raise_for_status()  # This will raise an exception for HTTP errors
@@ -110,7 +120,7 @@ def insert_remote_image_info(image_info):
 # ]
 def delete_remote_image(remote_image_id):
     base_url = os.getenv("DN_CLI_API", "https://signalsandsorceryapi.com")
-    delete_url = f"{base_url}/hub/remote-images/{remote_image_id}/"
+    delete_url = f"{base_url}:{api_port}/hub/remote-images/{remote_image_id}/"
 
     # Perform the DELETE request
     response = requests.delete(delete_url)
@@ -126,7 +136,7 @@ def delete_remote_image(remote_image_id):
 
 def get_remote_images() -> []:
     base_url = os.getenv("DN_CLI_API", "https://signalsandsorceryapi.com")
-    response = requests.get(f"{base_url}/api/hub/remote-images/")
+    response = requests.get(f"{base_url}:{api_port}/api/hub/remote-images/")
     remote_images_data = response.json()
 
     remote_images = [
@@ -147,7 +157,7 @@ def get_remote_images() -> []:
 
 def delete_remote_source(remote_source_id):
     base_url = os.getenv("DN_CLI_API", "https://signalsandsorceryapi.com")
-    delete_url = f"{base_url}/hub/remote-sources/{remote_source_id}/"
+    delete_url = f"{base_url}:{api_port}/hub/remote-sources/{remote_source_id}/"
 
     # Perform the DELETE request
     response = requests.delete(delete_url)
@@ -162,7 +172,7 @@ def delete_remote_source(remote_source_id):
 
 
 def get_remote_sources() -> []:
-    response = requests.get(f"{base_url}/api/hub/remote-sources/")
+    response = requests.get(f"{base_url}:{api_port}/api/hub/remote-sources/")
     remote_images_data = response.json()
 
     remote_sources = [

@@ -11,6 +11,7 @@ import platform
 from urllib.parse import urlparse
 import docker
 import getpass
+import webbrowser
 
 from .file_uploader import FileUploader
 
@@ -30,6 +31,8 @@ from .persistence import (
     get_container_states,
     get_docker_credentials,
     save_docker_credentials,
+    save_access_token,
+    delete_access_tokens,
 )
 from .api import (
     get_remote_images,
@@ -39,6 +42,10 @@ from .api import (
     delete_remote_source,
 )
 from .builder import DockerImageBuilder
+
+base_url = os.getenv("DN_CLI_API", "https://signalsandsorceryapi.com")
+auth_port = os.getenv("DN_CLI_AUTH_PORT", "8082")
+api_port = os.getenv("DN_CLI_API_PORT", "8081")
 
 # default
 default_title = "Welcome to Signals & Sorcery!"
@@ -82,8 +89,15 @@ def menu(ctx):
     option_remotes = "elixirs (ready to run)"
     option_sources = "elixir source (ready to build)"
     option_docker = "docker-images (publish or run)"
+    option_account = "account (sign up/in/out)"
 
-    entry_options = [option_tokens, option_remotes, option_sources, option_docker]
+    entry_options = [
+        option_tokens,
+        option_remotes,
+        option_sources,
+        option_docker,
+        option_account,
+    ]
     selected_entry_option = select(
         option_title,
         choices=entry_options,
@@ -99,8 +113,87 @@ def menu(ctx):
         docker_menu(ctx)
     elif selected_entry_option == option_sources:
         source_menu(ctx)
+    elif selected_entry_option == option_account:
+        account_menu(ctx)
     else:
         click.echo(f"Error: Unexpected selection: {selected_entry_option}")
+
+
+option_account_sign_in = "sign in"
+option_account_sign_up = "sign up"
+option_account_sign_out = "sign out"
+
+
+def sign_up(ctx):
+    url = f"{base_url}:{auth_port}/accounts/signup/"
+
+    try:
+        # Attempt to open the URL in the default browser
+        webbrowser.open(url, new=2)
+        print(f"Opened {url} in the default browser.")
+        menu(ctx)
+    except Exception as e:
+        # Handle exceptions, such as if a browser could not be started
+        print(f"Failed to open {url} in the default browser. Error: {e}")
+
+
+def verify_access_token(token):
+    """Verifies the token's validity with the backend."""
+    response = requests.post(
+        f"{base_url}:{auth_port}/api/token/verify/", json={"token": token}
+    )
+    return response.status_code == 200
+
+
+def sign_in(ctx):
+    username = click.prompt("Username", type=str)
+    password = click.prompt("Password", hide_input=True, type=str)
+
+    # Attempt to obtain token pair
+    response = requests.post(
+        f"{base_url}:{auth_port}/api/token/",
+        json={"email": username, "password": password},
+    )
+    if response.status_code == 200:
+        token = response.json().get("access")  # Assuming the token key is 'access'
+        if token and verify_access_token(token):
+            save_access_token(token)
+            click.echo("Successfully signed in.")
+        else:
+            click.echo("Failed to verify the access token.")
+    else:
+        click.echo("Failed to sign in. Please check your credentials.")
+
+
+def sign_out(ctx):
+    # Simply remove the token from the database to "sign out"
+    delete_access_tokens()
+    click.echo("Successfully signed out.")
+
+
+def account_menu(ctx):
+    title = default_title
+
+    account_actions = [
+        option_account_sign_in,
+        option_account_sign_up,
+        option_account_sign_out,
+    ]
+    selected_action = select(
+        title,
+        choices=account_actions,
+    ).ask()
+
+    clear_screen()
+
+    if selected_action == option_account_sign_in:
+        sign_in(ctx)
+    elif selected_action == option_account_sign_up:
+        sign_up(ctx)
+    elif selected_action == option_account_sign_out:
+        sign_out(ctx)
+    else:
+        menu(ctx)
 
 
 def tokens_menu(ctx):
@@ -253,6 +346,8 @@ def publish_elixir_source(ctx):
     # Handling the response
     if response.status_code == 200 or response.status_code == 201:
         click.echo("Elixir source published successfully.")
+    if response.status_code == 401:
+        click.echo("Unauthorized. Please Sign In, then try again.")
     else:
         click.echo(
             f"Failed to publish Elixir source. Status code: {response.status_code}"
@@ -297,7 +392,6 @@ def source_menu(ctx):
 
         menu(ctx)
     elif selected_action == option_publish:
-
         publish_elixir_source(ctx)
         menu(ctx)
 
@@ -501,7 +595,6 @@ def list_docker_images(ctx, selected_action):
             selected_action == option_docker_run_cpu
             or selected_action == option_docker_run_gpu
         ):
-
             use_gpu = True if selected_action == option_docker_run_gpu else False
 
             start_container(

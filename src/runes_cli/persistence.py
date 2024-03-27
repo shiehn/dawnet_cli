@@ -19,6 +19,9 @@ os.makedirs(data_dir, exist_ok=True)
 # Path to the SQLite database within the data directory
 db_path = os.path.join(data_dir, "runes_cli.db")
 
+# print("db_path: ", db_path)
+# exit(0)
+
 # Connect to the SQLite database
 conn = sqlite3.connect(db_path)
 cursor = conn.cursor()
@@ -50,6 +53,19 @@ CREATE TABLE IF NOT EXISTS docker_hub_credentials
 )
 conn.commit()
 
+
+# Create table for storing access tokens
+cursor.execute(
+    """
+    CREATE TABLE IF NOT EXISTS access_tokens (
+    id INTEGER PRIMARY KEY,
+    token TEXT,
+    saved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """
+)
+conn.commit()
+
 from cryptography.fernet import Fernet
 
 
@@ -75,13 +91,17 @@ def save_docker_credentials(username, password):
     encrypted_password = cipher_suite.encrypt(password.encode())
     # Clear the existing credentials before saving the new ones
     cursor.execute("DELETE FROM docker_hub_credentials")
-    cursor.execute("INSERT INTO docker_hub_credentials (username, encrypted_password) VALUES (?, ?)",
-                   (username, encrypted_password))
+    cursor.execute(
+        "INSERT INTO docker_hub_credentials (username, encrypted_password) VALUES (?, ?)",
+        (username, encrypted_password),
+    )
     conn.commit()
 
 
 def get_docker_credentials():
-    cursor.execute("SELECT username, encrypted_password FROM docker_hub_credentials LIMIT 1")
+    cursor.execute(
+        "SELECT username, encrypted_password FROM docker_hub_credentials LIMIT 1"
+    )
     row = cursor.fetchone()
     if row:
         username, encrypted_password = row
@@ -93,7 +113,7 @@ def get_docker_credentials():
 
 # Updated save_pid function
 def save_container_state(
-        pid, container_id, remote_name, remote_description, associated_token, status
+    pid, container_id, remote_name, remote_description, associated_token, status
 ):
     cursor.execute(
         "INSERT INTO container_pids (pid, container_id, remote_name, remote_description, associated_token, status) VALUES (?, ?, ?, ?, ?, ?)",
@@ -175,3 +195,32 @@ def set_or_update_token(token=None):
 
     save_token_to_db(token)
     return token
+
+
+def save_access_token(token):
+    """
+    Saves the given access token to the database, removing any existing ones first.
+    """
+    # Clear any existing tokens before saving the new one
+    cursor.execute("DELETE FROM access_tokens")
+    # Insert the new access token
+    cursor.execute("INSERT INTO access_tokens (token) VALUES (?)", (token,))
+    conn.commit()
+
+
+def get_access_token():
+    """
+    Retrieves the current access token from the database.
+    Returns None if no token is found.
+    """
+    cursor.execute("SELECT token FROM access_tokens ORDER BY id DESC LIMIT 1")
+    row = cursor.fetchone()
+    return row[0] if row else None
+
+
+def delete_access_tokens():
+    """
+    Deletes all access tokens from the database, effectively signing out the user.
+    """
+    cursor.execute("DELETE FROM access_tokens")
+    conn.commit()
