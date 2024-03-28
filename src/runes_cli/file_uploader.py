@@ -2,11 +2,12 @@ import os
 
 from aiohttp import ClientSession
 
+from .config import URL_API
+
 
 class FileUploader:
     async def get_signed_url(self, filename, token) -> str:
-        base_url = os.getenv("DN_CLI_API", "https://signalsandsorceryapi.com")
-        url = f"{base_url}/api/hub/get_signed_url/?token={token}&filename={filename}"
+        url = f"{URL_API}/api/hub/get_signed_url/?token={token}&filename={filename}"
         async with ClientSession() as session:
             async with session.get(url) as response:
                 # TODO: Check if response is ok

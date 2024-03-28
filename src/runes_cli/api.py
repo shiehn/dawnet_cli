@@ -1,12 +1,9 @@
 import os
 import requests
 
+from .config import URL_API
 from .models import RemoteImage, RemoteSource
 from .persistence import get_access_token
-
-base_url = os.getenv("DN_CLI_API", "https://signalsandsorceryapi.com")
-auth_port = os.getenv("DN_CLI_AUTH_PORT", "8082")
-api_port = os.getenv("DN_CLI_API_PORT", "8081")
 
 
 def get_remote_sources() -> []:
@@ -34,13 +31,13 @@ def get_remote_sources() -> []:
 
 
 def publish_remote_source(
-    remote_name,
-    remote_description,
-    remote_category,
-    remote_author,
-    source_url,
-    colab_url=None,
-    remote_version=None,
+        remote_name,
+        remote_description,
+        remote_category,
+        remote_author,
+        source_url,
+        colab_url=None,
+        remote_version=None,
 ):
     """
     Publish a new remote source by making a POST request to the /remote-sources/ endpoint.
@@ -60,8 +57,7 @@ def publish_remote_source(
     """
 
     # Endpoint for the POST request
-    base_url = os.getenv("DN_CLI_API", "https://signalsandsorceryapi.com")
-    endpoint = f"{base_url}:{api_port}/api/hub/remote-sources/"
+    endpoint = f"{URL_API}/api/hub/remote-sources/"
 
     # Construct the JSON body of the request
     data = {
@@ -93,8 +89,7 @@ def publish_remote_source(
 
 def insert_remote_image_info(image_info):
     route = "/api/hub/remote-images/"
-    base_url = os.getenv("DN_CLI_API", "https://signalsandsorceryapi.com")
-    endpoint_url = f"{base_url}:{api_port}{route}"
+    endpoint_url = f"{URL_API}{route}"
     try:
         response = requests.post(endpoint_url, json=image_info)
         response.raise_for_status()  # This will raise an exception for HTTP errors
@@ -119,8 +114,7 @@ def insert_remote_image_info(image_info):
 #     }
 # ]
 def delete_elixir(remote_image_id):
-    base_url = os.getenv("DN_CLI_API", "https://signalsandsorceryapi.com")
-    delete_url = f"{base_url}:{api_port}/api/hub/remote-images/{remote_image_id}/"
+    delete_url = f"{URL_API}/api/hub/remote-images/{remote_image_id}/"
 
     access_token = get_access_token()
 
@@ -141,8 +135,7 @@ def delete_elixir(remote_image_id):
 
 
 def get_remote_images() -> []:
-    base_url = os.getenv("DN_CLI_API", "https://signalsandsorceryapi.com")
-    response = requests.get(f"{base_url}:{api_port}/api/hub/remote-images/")
+    response = requests.get(f"{URL_API}/api/hub/remote-images/")
     remote_images_data = response.json()
 
     remote_images = [
@@ -156,15 +149,11 @@ def get_remote_images() -> []:
         for item in remote_images_data
     ]
 
-    # print(f"base_url: {base_url}")
-    # print(f"Remote Images: {remote_images}")
-
     return remote_images
 
 
 def delete_remote_source(remote_source_id):
-    base_url = os.getenv("DN_CLI_API", "https://signalsandsorceryapi.com")
-    delete_url = f"{base_url}:{api_port}/api/hub/remote-sources/{remote_source_id}/"
+    delete_url = f"{URL_API}/api/hub/remote-sources/{remote_source_id}/"
 
     access_token = get_access_token()
 
@@ -185,7 +174,9 @@ def delete_remote_source(remote_source_id):
 
 
 def get_remote_sources() -> []:
-    response = requests.get(f"{base_url}:{api_port}/api/hub/remote-sources/")
+    list_sources_url = f"{URL_API}/api/hub/remote-sources/"
+
+    response = requests.get(list_sources_url)
     remote_images_data = response.json()
 
     remote_sources = [
@@ -198,8 +189,5 @@ def get_remote_sources() -> []:
         )
         for item in remote_images_data
     ]
-
-    # print(f"base_url: {base_url}")
-    # print(f"Remote Images: {remote_sources}")
 
     return remote_sources
