@@ -13,7 +13,6 @@ import docker
 import getpass
 import webbrowser
 
-from .config import URL_API, URL_AUTH
 from .file_uploader import FileUploader
 
 from .models import RemoteContainer, RemoteSource
@@ -43,6 +42,8 @@ from .api import (
     delete_remote_source,
 )
 from .builder import DockerImageBuilder
+
+base_url = os.getenv("DN_CLI_API", "https://signalsandsorceryapi.com")
 
 # default
 default_title = "Welcome to Signals & Sorcery!"
@@ -122,7 +123,7 @@ option_account_sign_out = "sign out"
 
 
 def sign_up(ctx):
-    url = f"{URL_AUTH}/accounts/signup/"
+    url = f"{base_url}/accounts/signup/"
 
     try:
         # Attempt to open the URL in the default browser
@@ -136,9 +137,7 @@ def sign_up(ctx):
 
 def verify_access_token(token):
     """Verifies the token's validity with the backend."""
-    response = requests.post(
-        f"{URL_AUTH}/auth/token/verify/", json={"token": token}
-    )
+    response = requests.post(f"{base_url}/auth/token/verify/", json={"token": token})
     return response.status_code == 200
 
 
@@ -148,9 +147,10 @@ def sign_in(ctx):
 
     # Attempt to obtain token pair
     response = requests.post(
-        f"{URL_AUTH}/auth/token/",
+        f"{base_url}/auth/token/",
         json={"email": username, "password": password},
     )
+
     if response.status_code == 200:
         token = response.json().get("access")  # Assuming the token key is 'access'
         if token and verify_access_token(token):
