@@ -13,6 +13,7 @@ import docker
 import getpass
 import webbrowser
 
+from .config import URL_AUTH, URL_API
 from .file_uploader import FileUploader
 
 from .models import RemoteContainer, RemoteSource
@@ -33,6 +34,7 @@ from .persistence import (
     save_docker_credentials,
     save_access_token,
     delete_access_tokens,
+    get_access_token,
 )
 from .api import (
     get_remote_images,
@@ -43,8 +45,6 @@ from .api import (
 )
 from .builder import DockerImageBuilder
 
-base_url = os.getenv("DN_CLI_API", "https://signalsandsorceryapi.com")
-
 # default
 default_title = "Welcome to Signals & Sorcery!"
 
@@ -52,19 +52,19 @@ default_title = "Welcome to Signals & Sorcery!"
 option_menu = "menu"
 
 # source options
-option_source_build = "build (elixirs from source code)"
-option_source_list = "list (elixir source code)"
-option_publish = "publish (elixir source code)"
-option_delete = "delete (elixir source code)"
+option_source_build = "build (runes from source code)"
+option_source_list = "list (runes source code)"
+option_publish = "publish (runes source code)"
+option_delete = "delete (runes source code)"
 
 # remote options
-option_remote_running = "running (active elixirs)"
-option_remote_available = "available (to run elixirs)"
+option_remote_running = "running (active runes)"
+option_remote_available = "available (to run runes)"
 
 # docker options
-option_docker_run_cpu = "run (a cpu docker-image as an elixir)"
-option_docker_run_gpu = "run (a gpu docker-image as an elixir)"
-option_docker_publish = "publish (a docker-image as an elixir)"
+option_docker_run_cpu = "run (a cpu docker-image as an rune)"
+option_docker_run_gpu = "run (a gpu docker-image as an rune)"
+option_docker_publish = "publish (a docker-image as an rune)"
 
 
 def clear_screen():
@@ -83,11 +83,12 @@ def cli(ctx):
 
 def menu(ctx):
     option_title = default_title
-    option_tokens = "tokens (connect your elixirs)"
-    option_remotes = "elixirs (ready to run)"
-    option_sources = "elixir source (ready to build)"
-    option_docker = "docker-images (publish or run)"
+    option_tokens = "tokens (connect your runes)"
+    option_remotes = "runes (run or manage)"
+    option_sources = "rune source code (ready to build)"
+    option_docker = "docker-images (run or publish as a rune)"
     option_account = "account (sign up/in/out)"
+    option_config = "config (cli configs)"
 
     entry_options = [
         option_tokens,
@@ -95,6 +96,7 @@ def menu(ctx):
         option_sources,
         option_docker,
         option_account,
+        option_config,
     ]
     selected_entry_option = select(
         option_title,
@@ -113,6 +115,9 @@ def menu(ctx):
         source_menu(ctx)
     elif selected_entry_option == option_account:
         account_menu(ctx)
+    elif selected_entry_option == option_config:
+        click.echo(f"URL_API={URL_API}")
+        click.echo(f"URL_AUTH={URL_AUTH}")
     else:
         click.echo(f"Error: Unexpected selection: {selected_entry_option}")
 
@@ -123,7 +128,7 @@ option_account_sign_out = "sign out"
 
 
 def sign_up(ctx):
-    url = f"{base_url}/accounts/signup/"
+    url = f"{URL_AUTH}/accounts/signup/"
 
     try:
         # Attempt to open the URL in the default browser
@@ -137,7 +142,7 @@ def sign_up(ctx):
 
 def verify_access_token(token):
     """Verifies the token's validity with the backend."""
-    response = requests.post(f"{base_url}/auth/token/verify/", json={"token": token})
+    response = requests.post(f"{URL_AUTH}/auth/token/verify/", json={"token": token})
     return response.status_code == 200
 
 
@@ -147,7 +152,7 @@ def sign_in(ctx):
 
     # Attempt to obtain token pair
     response = requests.post(
-        f"{base_url}/auth/token/",
+        f"{URL_AUTH}/auth/token/",
         json={"email": username, "password": password},
     )
 
@@ -283,6 +288,15 @@ def publish_elixir_source(ctx):
     """
     CLI tool to collect information and publish an Elixir source.
     """
+    access_token = get_access_token()
+    if not access_token:
+        click.echo("Please sign before publishing rune source.")
+        menu(ctx)
+
+    token_valid = verify_access_token(access_token)
+    if not token_valid:
+        click.echo("Please sign in before publishing rune source.")
+        menu(ctx)
 
     uploader = FileUploader()
     # uploader.upload(source_url)
@@ -305,42 +319,31 @@ def publish_elixir_source(ctx):
 
     # Collecting information using questionary
     remote_name = questionary.text(
-        "Elixir name (maxLength: 100):",
+        "Rune name (maxLength: 100):",
         validate=lambda text: 1 <= len(text) <= 100,
     ).ask()
     remote_description = questionary.text(
-        "Elixir description (maxLength: 250):",
+        "Rune description (maxLength: 250):",
         validate=lambda text: 1 <= len(text) <= 250,
     ).ask()
-    remote_category = questionary.text(
-        "Elixir category (maxLength: 100):",
-        validate=lambda text: 1 <= len(text) <= 100,
+    remote_category = questionary.select(
+        "Select Rune category:",
+        choices=["audio", "image", "text", "video"],
     ).ask()
-    remote_author = questionary.text(
-        "Authors Name (maxLength: 100):",
-        validate=lambda text: 1 <= len(text) <= 100,
+    processor = questionary.select(
+        "Select the required processor:",
+        choices=["cpu", "gpu"],
     ).ask()
     remote_version = questionary.text(
         "Enter remote version (optional, maxLength: 25):",
         validate=lambda text: len(text) <= 25,
     ).ask()
 
-    # Constructing the data dictionary
-    data = {
-        "remote_name": remote_name,
-        "remote_description": remote_description,
-        "remote_category": remote_category,
-        "remote_author": remote_author,
-        "source_url": source_url,
-        "colab_url": colab_url if colab_url else None,
-        "remote_version": remote_version if remote_version else None,
-    }
-
     response = publish_remote_source(
         remote_name,
         remote_description,
         remote_category,
-        remote_author,
+        processor,
         source_url,
         colab_url,
         remote_version,
@@ -348,12 +351,15 @@ def publish_elixir_source(ctx):
 
     # Handling the response
     if response.status_code == 200 or response.status_code == 201:
-        click.echo("Elixir source published successfully.")
+        clear_screen()
+        click.echo("Rune source code published successfully.")
     elif response.status_code == 401:
+        clear_screen()
         click.echo("Unauthorized. Please Sign In, then try again.")
     else:
+        clear_screen()
         click.echo(
-            f"Failed to publish Elixir source. Status code: {response.status_code}"
+            f"Failed to publish Rune source code. Status code: {response.status_code}"
         )
 
     menu(ctx)
@@ -413,7 +419,7 @@ def source_menu(ctx):
         )
 
         selected_source = select(
-            "Build an image from source code:",
+            "Build a Rune docker-image from Rune source code:",
             choices=[
                 (
                     {"name": "menu", "value": container}
@@ -447,7 +453,7 @@ def source_menu(ctx):
         )
 
         selected_source = select(
-            "Build an image from source code:",
+            "Build a Rune docker-image from Rune source code:",
             choices=[
                 (
                     {"name": "menu", "value": container}
@@ -464,8 +470,25 @@ def source_menu(ctx):
         if selected_source.remote_name == "menu":
             clear_screen()
             menu(ctx)
+        else:
+            try:
+                print(f"selected_source.source_url: {selected_source.source_url}")
+                validate_notebook_source(selected_source.source_url)
+                image_name = get_valid_docker_image_name()
 
-        menu(ctx)
+                # BUILD THE IMAGE
+                try:
+                    builder = DockerImageBuilder()
+                    builder.build_docker_image(selected_source.source_url, image_name)
+                    clear_screen()
+                except Exception as e:
+                    clear_screen()
+                    click.echo(f"Error building the docker image: {e}")
+            except Exception as e:
+                clear_screen()
+                click.echo(f"Invalid source URL: {e}")
+
+            menu(ctx)
 
     else:
         menu(ctx)
@@ -500,8 +523,6 @@ def docker_menu(ctx):
 
     clear_screen()
 
-    print("selected_category" + selected_category)
-
     if selected_category == option_menu:
         menu(ctx)
     else:
@@ -512,41 +533,37 @@ def gather_image_info(image_name):
     """
     Prompts the user for missing image information and returns a dictionary with all data.
     """
-    questions = [
-        {
-            "type": "input",
-            "name": "remote_name",
-            "message": "Name the Elixir:",
-            "default": "Default",
-        },
-        {
-            "type": "input",
-            "name": "remote_description",
-            "message": "Describe the Elixir:",
-            "default": "Default",
-        },
-        {
-            "type": "input",
-            "name": "remote_category",
-            "message": "Categorize the Elixir:",
-            "default": "audio",
-        },
-        {
-            "type": "input",
-            "name": "remote_author",
-            "message": "Authors name:",
-            "default": "Default",
-        },
-        {
-            "type": "input",
-            "name": "remote_version",
-            "message": 'Enter the remote version (default "v0"):',
-            "default": "v0",
-        },
-    ]
+    # Collecting information using questionary
+    rune_name = questionary.text(
+        "Rune name (maxLength: 100):",
+        validate=lambda text: 1 <= len(text) <= 100,
+    ).ask()
+    rune_description = questionary.text(
+        "Rune description (maxLength: 250):",
+        validate=lambda text: 1 <= len(text) <= 250,
+    ).ask()
+    rune_category = questionary.select(
+        "Select Rune category:",
+        choices=["audio", "image", "text", "video"],
+    ).ask()
+    processor = questionary.select(
+        "Select the required processor:",
+        choices=["cpu", "gpu"],
+    ).ask()
+    rune_version = questionary.text(
+        "Enter remote version (optional, maxLength: 25):",
+        validate=lambda text: len(text) <= 25,
+    ).ask()
 
-    answers = prompt(questions)
-    answers["image_name"] = image_name  # Assuming image_name is always provided
+    answers = {
+        "remote_name": rune_name,
+        "remote_description": rune_description,
+        "remote_category": rune_category,
+        "processor": processor,
+        "remote_author": "placeholder",
+        "image_name": image_name,
+        "remote_version": rune_version,
+    }
 
     return answers
 
@@ -570,9 +587,9 @@ def list_docker_images(ctx, selected_action):
         remotes.append(RemoteContainer(0, 0, 0, "menu", ""))
 
         question = (
-            "Select a local docker image to publish to the Elixir Vault"
+            "Select a local docker image to publish to the Rune Vault"
             if selected_action == option_docker_publish
-            else "Select a local docker image to run as an Elixir"
+            else "Select a local docker image to run as a Rune"
         )
 
         selected_docker_image = select(
@@ -612,6 +629,16 @@ def list_docker_images(ctx, selected_action):
 
             menu(ctx)
         elif selected_action == option_docker_publish:
+            access_token = get_access_token()
+            if not access_token:
+                click.echo("Please sign before publishing image as a rune.")
+                menu(ctx)
+
+            token_valid = verify_access_token(access_token)
+            if not token_valid:
+                click.echo("Please sign in before publishing image as a rune.")
+                menu(ctx)
+
             if check_and_login_to_docker():
                 if publish_docker_image(selected_docker_image.remote_name, "latest"):
                     clear_screen()
@@ -625,16 +652,20 @@ def list_docker_images(ctx, selected_action):
                     image_name = image_name_with_tag.split(":")[0]
                     image_info = gather_image_info(image_name)
 
-                    if insert_remote_image_info(image_info):
+                    if insert_remote_image_info(image_info, access_token):
+                        clear_screen()
                         print("Image information successfully registered.")
                     else:
+                        clear_screen()
                         print("Failed to register image information.")
 
                     return
                 else:
+                    clear_screen()
                     print("Docker image publish failed.")
                 return
             else:
+                clear_screen()
                 print("DID NOT SUCCESSFULLY LOGIN TO DOCKER HUB")
                 return
 

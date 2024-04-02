@@ -1,7 +1,7 @@
 import os
 import requests
 
-from .config import URL_API
+from .config import URL_API, URL_AUTH
 from .models import RemoteImage, RemoteSource
 from .persistence import get_access_token
 
@@ -31,13 +31,13 @@ def get_remote_sources() -> []:
 
 
 def publish_remote_source(
-        remote_name,
-        remote_description,
-        remote_category,
-        remote_author,
-        source_url,
-        colab_url=None,
-        remote_version=None,
+    remote_name,
+    remote_description,
+    remote_category,
+    processor,
+    source_url,
+    colab_url=None,
+    remote_version=None,
 ):
     """
     Publish a new remote source by making a POST request to the /remote-sources/ endpoint.
@@ -47,7 +47,6 @@ def publish_remote_source(
     - remote_name (str): The name of the remote source.
     - remote_description (str): A description of the remote source.
     - remote_category (str): The category of the remote source.
-    - remote_author (str): The author of the remote source.
     - source_url (str): The URL to the source.
     - colab_url (str, optional): The URL to a Colab, if applicable.
     - remote_version (str, optional): The version of the remote source, if applicable.
@@ -64,7 +63,8 @@ def publish_remote_source(
         "remote_name": remote_name,
         "remote_description": remote_description,
         "remote_category": remote_category,
-        "remote_author": remote_author,
+        "processor": processor,
+        "remote_author": "placeholder",
         "source_url": source_url,
         "colab_url": colab_url,
         "remote_version": remote_version,
@@ -87,14 +87,20 @@ def publish_remote_source(
     return response
 
 
-def insert_remote_image_info(image_info):
+def insert_remote_image_info(image_info, access_token):
     route = "/api/hub/remote-images/"
     endpoint_url = f"{URL_API}{route}"
     try:
-        response = requests.post(endpoint_url, json=image_info)
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json",
+        }
+
+        response = requests.post(endpoint_url, headers=headers, json=image_info)
         response.raise_for_status()  # This will raise an exception for HTTP errors
         return True
     except requests.RequestException as e:
+        print("DATA: ", image_info)
         print(f"Failed to register image information: {e}")
         return False
 
@@ -191,3 +197,13 @@ def get_remote_sources() -> []:
     ]
 
     return remote_sources
+
+
+def verify_token(token):
+    # Attempt to obtain token pair
+    response = requests.post(
+        f"{URL_AUTH}/auth/token/verify",
+        json={"token": token},
+    )
+
+    return response.status_code == 200
