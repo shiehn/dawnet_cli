@@ -42,24 +42,25 @@ def get_docker_namespace(username_provided):
     try:
         # Attempt to read the Docker config file
         if os.path.exists(docker_config_path):
-            with open(docker_config_path, 'r') as config_file:
+            with open(docker_config_path, "r") as config_file:
                 config = json.load(config_file)
 
-            auths = config.get('auths', {})
+            auths = config.get("auths", {})
             docker_hub_auth = auths.get("https://index.docker.io/v1/", {})
-            auth_base64 = docker_hub_auth.get('auth')
+            auth_base64 = docker_hub_auth.get("auth")
 
             if auth_base64:
                 # Decode the auth token to get "username:password"
-                auth_decoded = base64.b64decode(auth_base64).decode('utf-8')
-                config_username, _ = auth_decoded.split(':', 1)  # Extract username
+                auth_decoded = base64.b64decode(auth_base64).decode("utf-8")
+                config_username, _ = auth_decoded.split(":", 1)  # Extract username
 
         # Determine which username to use based on the conditions provided
         if config_username is None or config_username == username_provided:
             return username_provided  # Use the provided username
         else:
             print(
-                f"Config username ({config_username}) does not match the provided username ({username_provided}). Using config username.")
+                f"Config username ({config_username}) does not match the provided username ({username_provided}). Using config username."
+            )
             return config_username  # Use the username from the config
 
     except Exception as e:
@@ -117,13 +118,13 @@ def docker_check():
 
 
 def start_container(
-        image_name: str,
-        remote_name: str,
-        remote_description: str,
-        token: str,
-        gpu: bool = False,
-        command=None,
-        name=None,
+    image_name: str,
+    remote_name: str,
+    remote_description: str,
+    token: str,
+    gpu: bool = False,
+    command=None,
+    name=None,
 ) -> Container:
     # Check for GPU support if required
     if gpu and not check_nvidia_docker_installed():
@@ -146,7 +147,8 @@ def start_container(
         command=command,
         name=name,
         detach=True,
-        environment={"DN_CLI_TOKEN": token},
+        # environment={"DN_CLI_TOKEN": token, "PYDEVD_DISABLE_FILE_VALIDATION": 1},
+        environment={"DN_CLI_TOKEN": token, "PYDEVD_DISABLE_FILE_VALIDATION": 1},
         device_requests=device_requests,  # Add device requests here
     )
 
@@ -167,6 +169,17 @@ def start_container(
     )
     # save_container_state(pid, container.id, remote_name, token, 1)
 
+    # Fetch and print container logs
+    # print("Fetching container logs...")
+    # logs = container.logs(stream=True)
+    # for log in logs:
+    #     print(log.decode("utf-8"))
+
+    # Fetch and print initial container logs (without streaming)
+    # print("Fetching initial container logs...")
+    # logs = container.logs()
+    # print(logs.decode("utf-8"))
+
     return container
 
 
@@ -184,7 +197,7 @@ def stop_container(container_id):
         container = get_docker_client().containers.get(container_id)
         container.stop()
     except:
-        print(f"Error Stopping container: {container_id}")
+        # print(f"Error Stopping container: {container_id}")
         return
 
     print(f"Stopped container {container_id} successfully.")

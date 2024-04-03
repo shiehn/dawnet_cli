@@ -4,7 +4,7 @@ import click
 import docker
 import requests
 import questionary
-from questionary import select, prompt
+from questionary import select, prompt, Separator
 import os
 import re
 import platform
@@ -12,6 +12,8 @@ from urllib.parse import urlparse
 import docker
 import getpass
 import webbrowser
+from tkinter import Tk
+from tkinter.filedialog import askopenfilename
 
 from .config import URL_AUTH, URL_API
 from .file_uploader import FileUploader
@@ -53,10 +55,10 @@ default_title = "Welcome to Signals & Sorcery!"
 option_menu = "menu"
 
 # source options
-option_source_build = "build (rune from local source code)"
-option_source_list = "select (remote source code to build)"
-option_publish = "publish (runes source code)"
-option_delete = "delete (runes source code)"
+option_source_build = "build (rune from juptyer notebook file (.ipynb))"
+option_source_list = "select (published rune source code to build)"
+option_publish = "publish (rune source code)"
+option_delete = "delete (rune source code)"
 
 # remote options
 option_remote_running = "running (active runes)"
@@ -85,12 +87,12 @@ def cli(ctx):
 
 def menu(ctx):
     option_title = default_title
-    option_tokens = "tokens (connect your runes)"
-    option_remotes = "runes (run or manage)"
-    option_sources = "rune source code (ready to build)"
-    option_docker = "docker-images (run or publish as a rune)"
+    option_tokens = "tokens (set or update your connection token)"
+    option_remotes = "runes (run or manage published runes)"
+    option_sources = "rune source code (build runes from published source code)"
+    option_docker = "docker-images (run or publish a local docker-image as a rune)"
     option_account = "account (sign up/in/out)"
-    option_config = "config (cli configs)"
+    option_config = "config (manage cli configs)"
 
     entry_options = [
         option_tokens,
@@ -257,6 +259,17 @@ def validate_docker_image_name(name):
     return True
 
 
+def reformat_and_truncate_name(name):
+    """Reformat and truncate Docker image name to ensure validity."""
+    # Convert to lowercase
+    name = name.lower()
+    # Replace invalid characters with a hyphen
+    name = re.sub(r"[^a-z0-9._/-]", "-", name)
+    # Truncate to 50 characters
+    name = name[:50]
+    return name
+
+
 def validate_notebook_source(source):
     """Check if the notebook source is a valid URL or an existing local file."""
     # Check if source is a URL
@@ -275,15 +288,37 @@ def validate_notebook_source(source):
 
 def get_valid_docker_image_name():
     while True:
-        image_name = click.prompt("Enter the Docker image name", type=str)
+        # Initialize or reset auto_formatted_name to None at the start of each iteration
+        auto_formatted_name = None
+
+        image_name = click.prompt("Enter a Name for the Rune Docker image", type=str)
+
         if is_valid_docker_image_name(image_name):
             try:
                 validate_docker_image_name(image_name)
                 return image_name
             except Exception as e:
-                click.echo(f"Invalid image name: {e}")
+                # Auto-format the name right here and proceed with validation
+                auto_formatted_name = reformat_and_truncate_name(image_name)
+                click.echo(
+                    f"The provided image name is not valid. Auto formatting: {auto_formatted_name}"
+                )
         else:
-            click.echo("The provided image name is not valid. Please try again.")
+            # Similarly, auto-format the name here
+            auto_formatted_name = reformat_and_truncate_name(image_name)
+            click.echo(
+                f"The provided image name is not valid. Auto formatting: {auto_formatted_name}"
+            )
+
+        # After auto-formatting, if we have a valid name, validate and return it
+        if auto_formatted_name and is_valid_docker_image_name(auto_formatted_name):
+            try:
+                validate_docker_image_name(auto_formatted_name)
+                return auto_formatted_name
+            except Exception as e:
+                # If even the auto-formatted name fails validation, report and prompt again
+                click.echo(f"Auto formatted image name is still invalid: {e}")
+                # No need to auto-format again; just prompt in the next iteration
 
 
 def publish_elixir_source(ctx):
@@ -367,6 +402,28 @@ def publish_elixir_source(ctx):
     menu(ctx)
 
 
+def select_file_gui():
+    # Hides the deprecation warning
+    os.environ["TK_SILENCE_DEPRECATION"] = "1"
+
+    # Hides the root tkinter window
+    root = Tk()
+    root.withdraw()
+
+    # Attempt to bring the dialog to the front
+    root.lift()
+    root.attributes("-topmost", True)
+    root.after_idle(root.attributes, "-topmost", False)
+
+    # Opens the file selection dialog and returns the selected file path
+    file_path = askopenfilename(
+        filetypes=[
+            ("Notebook files", "*.ipynb")
+        ]  # This line filters for .ipynb files only
+    )
+    return file_path
+
+
 def source_menu(ctx):
     clear_screen()
 
@@ -385,9 +442,14 @@ def source_menu(ctx):
     ).ask()
 
     if selected_action == option_source_build:
-        source_url = click.prompt(
-            "Enter a URL or path to a `.ipynb` file to build", type=str
-        )
+        # Attempt to use the GUI file selector
+        source_url = select_file_gui()
+
+        # If the user cancels the selection, fallback to manual entry
+        if not source_url:
+            source_url = click.prompt(
+                "Enter a URL or path to a `.ipynb` file to build", type=str
+            )
 
         # Check if the source URL is valid
         try:
@@ -715,6 +777,16 @@ def list_remotes(ctx, selected_category):
             ],
         ).ask()
     elif selected_category == option_remote_delete:
+        access_token = get_access_token()
+        if not access_token:
+            click.echo("Please sign before deleting a published rune.")
+            menu(ctx)
+
+        token_valid = verify_access_token(access_token)
+        if not token_valid:
+            click.echo("Please sign in before deleting a published rune.")
+            menu(ctx)
+
         remotes = get_remote_images()
 
         remotes.append(RemoteContainer(0, 0, 0, option_menu, ""))
@@ -747,19 +819,31 @@ def list_remotes(ctx, selected_category):
         # Append 'menu' option to the remotes list
         remotes.append(RemoteContainer(0, 0, 0, option_menu))
 
+        # First, sort `remotes` by the `category` attribute
+        remotes = sorted(remotes, key=lambda container: container.category)
+
+        choices_with_separators = []
+
+        last_category = None  # To track the last category we've seen
+
+        for container in remotes:
+            # Check if we're in a new category, including for the very first category
+            if container.category != last_category:
+                # Add a separator for the new category
+                # This will now also add a separator before the first category
+                choices_with_separators.append(
+                    Separator(f"--- {container.category} ---------------")
+                )
+                last_category = container.category
+
+            # Add the actual choice for this item
+            choice_name = f"{container.remote_name} | Desc: {container.remote_description} | Type: {container.category} | Auth: {container.author} | Req: {container.processor}"
+            choices_with_separators.append({"name": choice_name, "value": container})
+
+        # Use `choices_with_separators` in your select prompt
         selected_remote = select(
             "Select a remote to manage:",
-            choices=[
-                (
-                    {"name": option_menu, "value": container}
-                    if container.remote_name == option_menu
-                    else {
-                        "name": f"{container.remote_name} - {container.remote_description}",
-                        "value": container,
-                    }
-                )
-                for container in remotes
-            ],
+            choices=choices_with_separators,
         ).ask()
 
     clear_screen()
@@ -871,10 +955,6 @@ def manage_remote(ctx, selected_remote, selected_category):
     action_logs = "logs (display the remote logs)"
     action_stop = "stop (the running remote)"
     action_menu = "menu"
-
-    print(
-        f"MANAGE REMOTE: selected_category={selected_category} selected_remote={selected_remote.remote_name}"
-    )
 
     actions = []
     if selected_category == option_remote_running:

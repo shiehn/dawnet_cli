@@ -151,6 +151,9 @@ def get_remote_images() -> []:
             image_name=item["image_name"],
             remote_version=item["remote_version"],
             id=item["id"],
+            author=item["remote_author"],
+            category=item["remote_category"],
+            processor=item["processor"],
         )
         for item in remote_images_data
     ]
