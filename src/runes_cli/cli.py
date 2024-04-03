@@ -42,6 +42,7 @@ from .api import (
     insert_remote_image_info,
     publish_remote_source,
     delete_remote_source,
+    delete_remote_image,
 )
 from .builder import DockerImageBuilder
 
@@ -52,14 +53,15 @@ default_title = "Welcome to Signals & Sorcery!"
 option_menu = "menu"
 
 # source options
-option_source_build = "build (runes from source code)"
-option_source_list = "list (runes source code)"
+option_source_build = "build (rune from local source code)"
+option_source_list = "select (remote source code to build)"
 option_publish = "publish (runes source code)"
 option_delete = "delete (runes source code)"
 
 # remote options
 option_remote_running = "running (active runes)"
 option_remote_available = "available (to run runes)"
+option_remote_delete = "delete (a published rune)"
 
 # docker options
 option_docker_run_cpu = "run (a cpu docker-image as an rune)"
@@ -366,6 +368,8 @@ def publish_elixir_source(ctx):
 
 
 def source_menu(ctx):
+    clear_screen()
+
     title = default_title
 
     token_actions = [
@@ -379,8 +383,6 @@ def source_menu(ctx):
         title,
         choices=token_actions,
     ).ask()
-
-    clear_screen()
 
     if selected_action == option_source_build:
         source_url = click.prompt(
@@ -418,8 +420,9 @@ def source_menu(ctx):
             )
         )
 
+        clear_screen()
         selected_source = select(
-            "Build a Rune docker-image from Rune source code:",
+            "Select source code to delete:",
             choices=[
                 (
                     {"name": "menu", "value": container}
@@ -437,6 +440,7 @@ def source_menu(ctx):
             clear_screen()
             menu(ctx)
         else:
+            clear_screen()
             delete_remote_source(selected_source.id)
             menu(ctx)
 
@@ -498,7 +502,12 @@ def remote_menu(ctx):
     title = "List remotes"
     option_menu = "menu"
 
-    category_options = [option_remote_running, option_remote_available, "menu"]
+    category_options = [
+        option_remote_running,
+        option_remote_available,
+        option_remote_delete,
+        option_menu,
+    ]
     selected_category = select(
         title,
         choices=category_options,
@@ -705,6 +714,33 @@ def list_remotes(ctx, selected_category):
                 for container in remotes
             ],
         ).ask()
+    elif selected_category == option_remote_delete:
+        remotes = get_remote_images()
+
+        remotes.append(RemoteContainer(0, 0, 0, option_menu, ""))
+
+        selected_remote = select(
+            "Select a published rune to delete:",
+            choices=[
+                (
+                    {"name": "menu", "value": container}
+                    if container.remote_name == "menu"
+                    else {
+                        "name": f"{container.remote_name} - {container.remote_description} [{container.remote_version}]",
+                        "value": container,
+                    }
+                )
+                for container in remotes
+            ],
+        ).ask()
+
+        if selected_remote.remote_name == "menu":
+            clear_screen()
+            menu(ctx)
+        else:
+            delete_remote_image(selected_remote.id)
+            menu(ctx)
+
     else:
         remotes = get_remote_images()
 

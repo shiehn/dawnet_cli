@@ -158,6 +158,27 @@ def get_remote_images() -> []:
     return remote_images
 
 
+def delete_remote_image(remote_image_id):
+    delete_url = f"{URL_API}/api/hub/remote-images/{remote_image_id}/"
+
+    access_token = get_access_token()
+
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+    }
+
+    response = requests.delete(delete_url, headers=headers)
+
+    # Checking the response
+    if response.status_code == 204:
+        print("The published rune was deleted successfully.")
+    else:
+        print(
+            f"Failed to delete the published rune. Status code: {response.status_code}, Detail: {response.text}"
+        )
+
+
 def delete_remote_source(remote_source_id):
     delete_url = f"{URL_API}/api/hub/remote-sources/{remote_source_id}/"
 
