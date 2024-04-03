@@ -147,8 +147,8 @@ def start_container(
         command=command,
         name=name,
         detach=True,
-        # environment={"DN_CLI_TOKEN": token, "PYDEVD_DISABLE_FILE_VALIDATION": 1},
-        environment={"DN_CLI_TOKEN": token, "PYDEVD_DISABLE_FILE_VALIDATION": 1},
+        environment={"DN_CLIENT_TOKEN": token},
+        # environment={"DN_CLIENT_TOKEN": token, "PYDEVD_DISABLE_FILE_VALIDATION": 1},
         device_requests=device_requests,  # Add device requests here
     )
 

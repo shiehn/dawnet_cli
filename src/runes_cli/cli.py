@@ -89,7 +89,7 @@ def menu(ctx):
     option_title = default_title
     option_tokens = "tokens (set or update your connection token)"
     option_remotes = "runes (run or manage published runes)"
-    option_sources = "rune source code (build runes from published source code)"
+    option_sources = "rune source code (build runes from source code)"
     option_docker = "docker-images (run or publish a local docker-image as a rune)"
     option_account = "account (sign up/in/out)"
     option_config = "config (manage cli configs)"
@@ -227,6 +227,7 @@ def tokens_menu(ctx):
         if not set_or_update_token(token):
             menu(ctx)
 
+        clear_screen()
         click.echo(f"Token has been updated to: {token}")
     elif selected_action == "view current token":
         token = read_token_from_db()
@@ -417,10 +418,8 @@ def select_file_gui():
 
     # Opens the file selection dialog and returns the selected file path
     file_path = askopenfilename(
-        filetypes=[
-            ("Notebook files", "*.ipynb")
-        ]  # This line filters for .ipynb files only
-    )
+        filetypes=[("Notebook files", "*.ipynb")]
+    )  # This line filters for .ipynb files only
     return file_path
 
 
@@ -460,6 +459,9 @@ def source_menu(ctx):
             try:
                 builder = DockerImageBuilder()
                 builder.build_docker_image(source_url, image_name)
+
+                clear_screen()
+                click.echo(f"Successfully build rune docker image: {image_name}")
             except Exception as e:
                 click.echo(f"Error building the docker image: {e}")
         except Exception as e:
@@ -561,7 +563,7 @@ def source_menu(ctx):
 
 
 def remote_menu(ctx):
-    title = "List remotes"
+    title = "List Runes"
     option_menu = "menu"
 
     category_options = [
@@ -586,7 +588,12 @@ def remote_menu(ctx):
 
 def docker_menu(ctx):
     title = "Docker image actions"
-    category_options = [option_docker_run_cpu, option_docker_publish, option_menu]
+    category_options = [
+        option_docker_run_cpu,
+        option_docker_run_gpu,
+        option_docker_publish,
+        option_menu,
+    ]
     selected_category = select(
         title,
         choices=category_options,
@@ -730,15 +737,15 @@ def list_docker_images(ctx, selected_action):
                         clear_screen()
                         print("Failed to register image information.")
 
-                    return
+                    menu(ctx)
                 else:
                     clear_screen()
                     print("Docker image publish failed.")
-                return
+
+                menu(ctx)
             else:
                 clear_screen()
                 print("DID NOT SUCCESSFULLY LOGIN TO DOCKER HUB")
-                return
 
     menu(ctx)
 
