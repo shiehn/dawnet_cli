@@ -9,7 +9,9 @@ setup(
     package_dir={"": "src"},
     include_package_data=True,
     install_requires=[
+        "aiohttp",
         "click",
+        "cryptography",
         "docker",
         "questionary",
         "urllib3",
