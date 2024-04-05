@@ -47,7 +47,16 @@ FROM jupyter/base-notebook
 
 # Install FFmpeg
 USER root
-RUN apt-get update && apt-get install -y ffmpeg
+
+# Update the package list and install ffmpeg, git, gcc, g++, make, and libsndfile1-dev
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    git \
+    gcc \
+    g++ \
+    make \
+    libsndfile1-dev \
+    portaudio19-dev
 
 # Copy the notebook and the startup script into the container
 COPY source.ipynb startup.sh /usr/src/app/
