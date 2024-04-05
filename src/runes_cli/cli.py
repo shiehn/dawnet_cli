@@ -442,10 +442,10 @@ def source_menu(ctx):
 
     if selected_action == option_source_build:
         # Attempt to use the GUI file selector
-        source_url = select_file_gui()
-
-        # If the user cancels the selection, fallback to manual entry
-        if not source_url:
+        try:
+            source_url = select_file_gui()
+        except Exception as e:
+            # If the user cancels the selection, fallback to manual entry
             source_url = click.prompt(
                 "Enter a URL or path to a `.ipynb` file to build", type=str
             )
