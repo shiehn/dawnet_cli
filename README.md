@@ -1,4 +1,5 @@
-# Signals And Sorcery CLI
+![signals_and_sorcery_logo](https://storage.googleapis.com/docs-assets/sas_runes_cli_2.png)
+# RUNES CLI
 A python CLI used to setup &amp; manage [Crucible Plugins](https://dawnet.tools/) remote scripts on MAC, LINUX and Servers
 
 ### Requirements:

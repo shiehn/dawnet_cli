@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="runes-cli",
-    version="0.4.4",
+    version="0.4.5",
     author="Steve Hiehn",
     author_email="stevehiehn@gmail.com",
     packages=find_packages(where="src"),
